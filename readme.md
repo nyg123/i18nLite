@@ -137,11 +137,11 @@ set CONFIG_FILE=config/config.local.yaml
 - DELETE `/api/keys/:id` - 删除Key
 
 ### 翻译管理
-- GET `/api/keys/:keyId/translations` - 获取Key的所有翻译
-- POST `/api/keys/:keyId/translations` - 创建翻译
+- GET `/api/key-translations/:keyId` - 获取Key的所有翻译
+- POST `/api/key-translations/:keyId` - 创建翻译
 - PUT `/api/translations/:id` - 更新翻译
 - DELETE `/api/translations/:id` - 删除翻译
-- PUT `/api/keys/:keyId/translations/batch` - 批量更新翻译
+- PUT `/api/key-translations/:keyId/batch` - 批量更新翻译
 
 ## 开发说明
 

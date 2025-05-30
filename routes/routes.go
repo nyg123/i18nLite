@@ -52,11 +52,14 @@ func SetupRoutes(r *gin.Engine) {
 		{
 			keys.PUT("/:id", controllers.UpdateKey)
 			keys.DELETE("/:id", controllers.DeleteKey)
+		}
 
-			// 翻译管理 API
-			keys.GET("/:keyId/translations", controllers.GetTranslations)
-			keys.POST("/:keyId/translations", controllers.CreateTranslation)
-			keys.PUT("/:keyId/translations/batch", controllers.BatchUpdateTranslations)
+		// Key 翻译管理 API
+		keyTranslations := api.Group("/key-translations")
+		{
+			keyTranslations.GET("/:keyId", controllers.GetTranslations)
+			keyTranslations.POST("/:keyId", controllers.CreateTranslation)
+			keyTranslations.PUT("/:keyId/batch", controllers.BatchUpdateTranslations)
 		}
 
 		// 翻译管理 API

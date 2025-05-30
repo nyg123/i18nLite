@@ -158,10 +158,9 @@
                     }
                 });
             }
-            
-            // 加载翻译列表
+              // 加载翻译列表
             function loadTranslations() {
-                $.get('/api/keys/' + keyId + '/translations', function(res) {
+                $.get('/api/key-translations/' + keyId, function(res) {
                     if (res.code === 0) {
                         renderTranslations(res.data);
                     } else {
@@ -249,11 +248,10 @@
                 });
                 form.render('select');
             });
-            
-            // 批量编辑
+              // 批量编辑
             $('#batchEdit').click(function() {
                 // 获取当前翻译数据
-                $.get('/api/keys/' + keyId + '/translations', function(res) {
+                $.get('/api/key-translations/' + keyId, function(res) {
                     if (res.code === 0) {
                         var translations = res.data;
                         var formItems = '';
@@ -291,11 +289,10 @@
                     }
                 });
             });
-            
-            // 监听创建翻译表单提交
+              // 监听创建翻译表单提交
             form.on('submit(createTranslation)', function(data) {
                 $.ajax({
-                    url: '/api/keys/' + keyId + '/translations',
+                    url: '/api/key-translations/' + keyId,
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(data.field),
@@ -324,9 +321,8 @@
                         });
                     }
                 });
-                
-                $.ajax({
-                    url: '/api/keys/' + keyId + '/translations/batch',
+                  $.ajax({
+                    url: '/api/key-translations/' + keyId + '/batch',
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify({translations: translations}),
