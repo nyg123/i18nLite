@@ -4,7 +4,7 @@ services:
   # MySQL 数据库
   mysql:
     image: mysql:8.0
-    container_name: i18n_mysql
+    container_name: i18nlite-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: i18n_password
@@ -12,7 +12,7 @@ services:
       MYSQL_USER: i18n_user
       MYSQL_PASSWORD: i18n_password
     ports:
-      - "3307:3306"   
+      - "3306:3306"   # 本地开发使用标准端口
     volumes:
       - C:/docker/mysql/i18n_mysql:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -20,25 +20,41 @@ services:
     networks:
       - i18n_network
 
-  # I18nLite 应用
-  i18n_app:
+  # 后端API服务
+  backend:
     build: .
-    container_name: i18n_app
+    container_name: i18nlite-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
+      - GIN_MODE=debug   # 本地开发使用debug模式
       - DB_HOST=mysql
-      - DB_PORT=3306
       - DB_PORT=3306
       - DB_USERNAME=i18n_user
       - DB_PASSWORD=i18n_password
       - DB_DATABASE=i18n_lite
     volumes:
-      - ./temp:/root/temp
-      - ./logs:/root/logs
+      - ./config:/app/config
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+      - .:/app  # 本地开发挂载整个项目目录
     depends_on:
       - mysql
+    networks:
+      - i18n_network
+  # Nginx 反向代理 (为前端静态文件和API代理提供统一入口)
+  nginx:
+    image: nginx:alpine
+    container_name: i18nlite-nginx
+    restart: unless-stopped
+    ports:
+      - "3000:80"  # 本地访问 http://localhost:3000
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/build:/usr/share/nginx/html  # 挂载前端构建文件
+    depends_on:
+      - backend
     networks:
       - i18n_network
 

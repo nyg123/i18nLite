@@ -2,46 +2,26 @@ package routes
 
 import (
 	"I18nLite/controllers"
+	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes(r *gin.Engine) {
-	// 静态文件服务
-	r.Static("/static", "./web/static")
-	r.LoadHTMLGlob("web/templates/*")
+	// 配置CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000", "http://127.0.0.1:8080"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
-	// 首页
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(200, "index.html", gin.H{
-			"title": "多语言管理工具",
-		})
-	})
-
-	// 项目管理页面
-	r.GET("/projects", func(c *gin.Context) {
-		c.HTML(200, "projects.html", gin.H{
-			"title": "项目管理",
-		})
-	})
-
-	// Key管理页面
-	r.GET("/projects/:id/keys", func(c *gin.Context) {
-		projectID := c.Param("id")
-		c.HTML(200, "keys.html", gin.H{
-			"title":     "Key管理",
-			"projectId": projectID,
-		})
-	})
-
-	// 翻译管理页面
-	r.GET("/projects/:projectId/keys/:keyId/translations", func(c *gin.Context) {
-		projectID := c.Param("projectId")
-		keyID := c.Param("keyId")
-		c.HTML(200, "translations.html", gin.H{
-			"title":     "翻译管理",
-			"projectId": projectID,
-			"keyId":     keyID,
+	// 健康检查
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "I18nLite API Server is running",
 		})
 	})
 

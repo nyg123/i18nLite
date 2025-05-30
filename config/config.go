@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -67,8 +68,9 @@ func Init() {
 		Cfg.Database.Host = host
 	}
 	if port := os.Getenv("DB_PORT"); port != "" {
-		// 简化处理，实际项目中应该转换为int
-		Cfg.Database.Port = 3306
+		if p, err := strconv.Atoi(port); err == nil {
+			Cfg.Database.Port = p
+		}
 	}
 	if username := os.Getenv("DB_USERNAME"); username != "" {
 		Cfg.Database.Username = username
@@ -78,5 +80,15 @@ func Init() {
 	}
 	if database := os.Getenv("DB_DATABASE"); database != "" {
 		Cfg.Database.Database = database
+	}
+
+	// 从环境变量覆盖服务器配置
+	if mode := os.Getenv("GIN_MODE"); mode != "" {
+		Cfg.Server.Mode = mode
+	}
+	if serverPort := os.Getenv("SERVER_PORT"); serverPort != "" {
+		if p, err := strconv.Atoi(serverPort); err == nil {
+			Cfg.Server.Port = p
+		}
 	}
 }
