@@ -1,0 +1,26 @@
+# I18nLite 配置文件
+server:
+  port: 8080
+  mode: debug # debug, release
+
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  database: i18n_lite
+  charset: utf8mb4
+  parseTime: true
+  loc: Local
+
+upload:
+  max_size: 10 # MB
+  allowed_types: [".po", ".xlsx", ".xls"]
+  temp_dir: "./temp"
+
+log:
+  level: info # debug, info, warn, error
+  file: "./logs/app.log"
+  max_size: 100 # MB
+  max_backups: 3
+  max_age: 28 # days

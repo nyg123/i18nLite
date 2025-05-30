@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - I18nLite</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <style>
+        .header {
+            background: #393D49;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .container {
+            padding: 0 20px;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .breadcrumb a {
+            color: #01AAED;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .translation-item {
+            border: 1px solid #e6e6e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .lang-code {
+            font-weight: bold;
+            color: #01AAED;
+            margin-bottom: 5px;
+        }
+        .translation-content {
+            margin-bottom: 10px;
+        }
+        .translation-actions {
+            text-align: right;
+        }
+        .key-info {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{.title}}</h1>
+    </div>
+    
+    <div class="container">
+        <!-- 面包屑导航 -->
+        <div class="breadcrumb">
+            <a href="/">首页</a> > 
+            <a href="/projects/{{.projectId}}/keys" id="projectLink">项目</a> > 
+            <span id="keyName">Key</span> > 
+            翻译管理
+        </div>
+        
+        <!-- Key信息 -->
+        <div class="key-info">
+            <h3 id="keyTitle">Key信息</h3>
+            <p id="keyComment">注释信息</p>
+        </div>
+        
+        <div class="layui-row">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <span>翻译列表</span>
+                        <div style="float: right;">
+                            <button class="layui-btn layui-btn-sm" id="addTranslation">
+                                <i class="layui-icon layui-icon-add-1"></i> 添加翻译
+                            </button>
+                            <button class="layui-btn layui-btn-sm layui-btn-normal" id="batchEdit">
+                                <i class="layui-icon layui-icon-edit"></i> 批量编辑
+                            </button>
+                        </div>
+                    </div>
+                    <div class="layui-card-body">
+                        <!-- 翻译列表 -->
+                        <div id="translationList">
+                            <!-- 翻译项将通过JS动态插入 -->
+                        </div>
+                        
+                        <!-- 空状态 -->
+                        <div id="emptyState" style="text-align: center; padding: 40px; color: #999; display: none;">
+                            <i class="layui-icon layui-icon-face-cry" style="font-size: 48px;"></i>
+                            <p>暂无翻译数据</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        var projectId = {{.projectId}};
+        var keyId = {{.keyId}};
+        
+        // 支持的语言列表
+        var languages = [
+            {code: 'en', name: 'English'},
+            {code: 'zh', name: '中文'},
+            {code: 'fr', name: 'Français'},
+            {code: 'de', name: 'Deutsch'},
+            {code: 'es', name: 'Español'},
+            {code: 'ja', name: '日本語'},
+            {code: 'ko', name: '한국어'},
+            {code: 'ru', name: 'Русский'},
+            {code: 'pt', name: 'Português'},
+            {code: 'it', name: 'Italiano'},
+            {code: 'ar', name: 'العربية'},
+            {code: 'hi', name: 'हिन्दी'}
+        ];
+        
+        layui.use(['layer', 'form'], function(){
+            var layer = layui.layer;
+            var form = layui.form;
+            
+            // 加载项目和Key信息
+            function loadInfo() {
+                // 加载项目信息
+                $.get('/api/projects', {limit: 1000}, function(res) {
+                    if (res.code === 0) {
+                        var project = res.data.find(p => p.id == projectId);
+                        if (project) {
+                            $('#projectLink').text(project.name);
+                        }
+                    }
+                });
+                
+                // 加载Key信息
+                $.get('/api/projects/' + projectId + '/keys', {limit: 1000}, function(res) {
+                    if (res.code === 0) {
+                        var key = res.data.find(k => k.id == keyId);
+                        if (key) {
+                            $('#keyName').text(key.key_name);
+                            $('#keyTitle').text('Key: ' + key.key_name);
+                            $('#keyComment').text('注释: ' + (key.comment || '暂无注释'));
+                        }
+                    }
+                });
+            }
+            
+            // 加载翻译列表
+            function loadTranslations() {
+                $.get('/api/keys/' + keyId + '/translations', function(res) {
+                    if (res.code === 0) {
+                        renderTranslations(res.data);
+                    } else {
+                        layer.msg('加载翻译失败');
+                    }
+                });
+            }
+            
+            // 渲染翻译列表
+            function renderTranslations(translations) {
+                if (translations.length === 0) {
+                    $('#translationList').hide();
+                    $('#emptyState').show();
+                    return;
+                }
+                
+                $('#emptyState').hide();
+                $('#translationList').show();
+                
+                var html = '';
+                translations.forEach(function(translation) {
+                    var langName = languages.find(l => l.code === translation.lang);
+                    langName = langName ? langName.name : translation.lang;
+                    
+                    html += `
+                        <div class="translation-item">
+                            <div class="lang-code">[${translation.lang}] ${langName}</div>
+                            <div class="translation-content">
+                                <textarea class="layui-textarea" readonly style="resize: none; height: 60px;">${translation.translation || ''}</textarea>
+                            </div>
+                            <div class="translation-actions">
+                                <button class="layui-btn layui-btn-xs layui-btn-normal" onclick="editTranslation(${translation.id}, '${translation.lang}', '${translation.translation || ''}')">
+                                    <i class="layui-icon layui-icon-edit"></i> 编辑
+                                </button>
+                                <button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteTranslation(${translation.id})">
+                                    <i class="layui-icon layui-icon-delete"></i> 删除
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                $('#translationList').html(html);
+            }
+            
+            // 初始化加载
+            loadInfo();
+            loadTranslations();
+            
+            // 添加翻译
+            $('#addTranslation').click(function() {
+                var langOptions = '';
+                languages.forEach(function(lang) {
+                    langOptions += `<option value="${lang.code}">${lang.code} - ${lang.name}</option>`;
+                });
+                
+                layer.open({
+                    type: 1,
+                    title: '添加翻译',
+                    area: ['500px', '400px'],
+                    content: `
+                        <form class="layui-form" style="padding: 20px;">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">语言</label>
+                                <div class="layui-input-block">
+                                    <select name="lang" required lay-verify="required">
+                                        <option value="">请选择语言</option>
+                                        ${langOptions}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">翻译内容</label>
+                                <div class="layui-input-block">
+                                    <textarea name="translation" placeholder="请输入翻译内容" class="layui-textarea" style="height: 120px;"></textarea>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn" lay-submit lay-filter="createTranslation">确定</button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                </div>
+                            </div>
+                        </form>
+                    `
+                });
+                form.render('select');
+            });
+            
+            // 批量编辑
+            $('#batchEdit').click(function() {
+                // 获取当前翻译数据
+                $.get('/api/keys/' + keyId + '/translations', function(res) {
+                    if (res.code === 0) {
+                        var translations = res.data;
+                        var formItems = '';
+                        
+                        languages.forEach(function(lang) {
+                            var existing = translations.find(t => t.lang === lang.code);
+                            var value = existing ? existing.translation : '';
+                            
+                            formItems += `
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">[${lang.code}] ${lang.name}</label>
+                                    <div class="layui-input-block">
+                                        <textarea name="${lang.code}" placeholder="请输入${lang.name}翻译" class="layui-textarea" style="height: 60px;">${value}</textarea>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        layer.open({
+                            type: 1,
+                            title: '批量编辑翻译',
+                            area: ['600px', '80%'],
+                            content: `
+                                <form class="layui-form" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+                                    ${formItems}
+                                    <div class="layui-form-item">
+                                        <div class="layui-input-block">
+                                            <button class="layui-btn" lay-submit lay-filter="batchUpdateTranslations">保存所有翻译</button>
+                                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            `
+                        });
+                    }
+                });
+            });
+            
+            // 监听创建翻译表单提交
+            form.on('submit(createTranslation)', function(data) {
+                $.ajax({
+                    url: '/api/keys/' + keyId + '/translations',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data.field),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('创建成功');
+                            layer.closeAll();
+                            loadTranslations();
+                        } else {
+                            layer.msg(res.error || '创建失败');
+                        }
+                    }
+                });
+                return false;
+            });
+            
+            // 监听批量更新翻译表单提交
+            form.on('submit(batchUpdateTranslations)', function(data) {
+                var translations = [];
+                languages.forEach(function(lang) {
+                    var content = data.field[lang.code];
+                    if (content && content.trim()) {
+                        translations.push({
+                            lang: lang.code,
+                            translation: content.trim()
+                        });
+                    }
+                });
+                
+                $.ajax({
+                    url: '/api/keys/' + keyId + '/translations/batch',
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({translations: translations}),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('批量更新成功');
+                            layer.closeAll();
+                            loadTranslations();
+                        } else {
+                            layer.msg(res.error || '批量更新失败');
+                        }
+                    }
+                });
+                return false;
+            });
+        });
+        
+        // 编辑翻译
+        function editTranslation(translationId, lang, content) {
+            var langInfo = languages.find(l => l.code === lang);
+            var langName = langInfo ? langInfo.name : lang;
+            
+            layui.layer.open({
+                type: 1,
+                title: '编辑翻译 - [' + lang + '] ' + langName,
+                area: ['500px', '350px'],
+                content: `
+                    <form class="layui-form" style="padding: 20px;">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">语言</label>
+                            <div class="layui-input-block">
+                                <input type="text" value="[${lang}] ${langName}" readonly class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">翻译内容</label>
+                            <div class="layui-input-block">
+                                <textarea name="translation" placeholder="请输入翻译内容" class="layui-textarea" style="height: 120px;">${content}</textarea>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" lay-submit lay-filter="updateTranslation" data-id="${translationId}">确定</button>
+                                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                            </div>
+                        </div>
+                    </form>
+                `
+            });
+        }
+        
+        // 删除翻译
+        function deleteTranslation(translationId) {
+            layui.layer.confirm('确定删除此翻译吗？', {
+                btn: ['确定', '取消']
+            }, function() {
+                $.ajax({
+                    url: '/api/translations/' + translationId,
+                    type: 'DELETE',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layui.layer.msg('删除成功');
+                            layui.layer.closeAll();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layui.layer.msg(res.error || '删除失败');
+                        }
+                    }
+                });
+            });
+        }
+        
+        // 监听更新翻译表单提交
+        layui.use(['form'], function(){
+            var form = layui.form;
+            form.on('submit(updateTranslation)', function(data) {
+                var translationId = $(this).data('id');
+                $.ajax({
+                    url: '/api/translations/' + translationId,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data.field),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layui.layer.msg('更新成功');
+                            layui.layer.closeAll();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layui.layer.msg(res.error || '更新失败');
+                        }
+                    }
+                });
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>

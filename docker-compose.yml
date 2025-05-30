@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: i18n_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: i18n_password
+      MYSQL_DATABASE: i18n_lite
+      MYSQL_USER: i18n_user
+      MYSQL_PASSWORD: i18n_password
+    ports:
+      - "3307:3306"   
+    volumes:
+      - C:/docker/mysql/i18n_mysql:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - i18n_network
+
+  # I18nLite 应用
+  i18n_app:
+    build: .
+    container_name: i18n_app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_PORT=3306
+      - DB_USERNAME=i18n_user
+      - DB_PASSWORD=i18n_password
+      - DB_DATABASE=i18n_lite
+    volumes:
+      - ./temp:/root/temp
+      - ./logs:/root/logs
+    depends_on:
+      - mysql
+    networks:
+      - i18n_network
+
+volumes:
+  mysql_data:
+
+networks:
+  i18n_network:
+    driver: bridge

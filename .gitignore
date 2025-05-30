@@ -1,0 +1,62 @@
+# I18nLite 多语言管理工具
+
+# 忽略构建产物
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 忽略测试产物
+*.test
+*.out
+
+# 忽略日志文件
+logs/
+*.log
+
+# 忽略临时文件
+temp/
+tmp/
+*.tmp
+*.temp
+
+# 忽略配置文件中的敏感信息
+config/local.yaml
+.env
+
+# 忽略IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 忽略操作系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略依赖文件
+vendor/
+
+# 忽略上传文件
+uploads/
+
+# 忽略数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 忽略Docker产物
+.dockerignore
+
+# 忽略yarn/npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 忽略压缩文件
+*.zip
+*.tar.gz
+*.rar

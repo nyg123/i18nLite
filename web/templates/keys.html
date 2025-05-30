@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - I18nLite</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <style>
+        .header {
+            background: #393D49;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .container {
+            padding: 0 20px;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        .breadcrumb a {
+            color: #01AAED;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{.title}}</h1>
+    </div>
+    
+    <div class="container">
+        <!-- 面包屑导航 -->
+        <div class="breadcrumb">
+            <a href="/">首页</a> > 
+            <span id="projectName">项目</span> > 
+            Key管理
+        </div>
+        
+        <div class="layui-row">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <span>Key列表</span>
+                        <div style="float: right;">
+                            <button class="layui-btn layui-btn-sm" id="addKey">
+                                <i class="layui-icon layui-icon-add-1"></i> 添加Key
+                            </button>
+                            <button class="layui-btn layui-btn-sm layui-btn-warm" id="importBtn">
+                                <i class="layui-icon layui-icon-upload"></i> 导入
+                            </button>
+                            <button class="layui-btn layui-btn-sm layui-btn-normal" id="exportBtn">
+                                <i class="layui-icon layui-icon-download-circle"></i> 导出
+                            </button>
+                        </div>
+                    </div>
+                    <div class="layui-card-body">
+                        <!-- 搜索框 -->
+                        <div class="layui-form" style="margin-bottom: 15px;">
+                            <div class="layui-inline">
+                                <input type="text" id="searchInput" placeholder="搜索Key名称" class="layui-input" style="width: 200px;">
+                            </div>
+                            <div class="layui-inline">
+                                <button class="layui-btn" id="searchBtn">搜索</button>
+                                <button class="layui-btn layui-btn-primary" id="resetBtn">重置</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Key列表表格 -->
+                        <table class="layui-table" lay-filter="keyTable">
+                            <thead>
+                                <tr>
+                                    <th>Key名称</th>
+                                    <th>注释</th>
+                                    <th>翻译数量</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keyTableBody">
+                                <!-- 数据将通过JS动态插入 -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- 分页 -->
+                        <div id="pagination"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/layui/layui.js"></script>
+    <script>
+        var projectId = {{.projectId}};
+        
+        layui.use(['layer', 'laypage', 'form', 'table'], function(){
+            var layer = layui.layer;
+            var laypage = layui.laypage;
+            var form = layui.form;
+            var table = layui.table;
+            
+            var currentPage = 1;
+            var pageSize = 10;
+            
+            // 加载项目信息
+            function loadProjectInfo() {
+                $.get('/api/projects', {limit: 1000}, function(res) {
+                    if (res.code === 0) {
+                        var project = res.data.find(p => p.id == projectId);
+                        if (project) {
+                            $('#projectName').text(project.name);
+                        }
+                    }
+                });
+            }
+            
+            // 加载Key列表
+            function loadKeys(page = 1, search = '') {
+                $.get('/api/projects/' + projectId + '/keys', {
+                    page: page,
+                    limit: pageSize,
+                    search: search
+                }, function(res) {
+                    if (res.code === 0) {
+                        renderKeys(res.data);
+                        renderPagination(res.count, page);
+                    } else {
+                        layer.msg('加载失败');
+                    }
+                });
+            }
+            
+            // 渲染Key列表
+            function renderKeys(keys) {
+                var html = '';
+                keys.forEach(function(key) {
+                    var translationCount = key.translations ? key.translations.length : 0;
+                    var createTime = new Date(key.created_at).toLocaleString();
+                    html += `
+                        <tr>
+                            <td>${key.key_name}</td>
+                            <td>${key.comment || '暂无注释'}</td>
+                            <td>${translationCount}</td>
+                            <td>${createTime}</td>
+                            <td>
+                                <button class="layui-btn layui-btn-xs" onclick="viewTranslations(${key.id})">
+                                    <i class="layui-icon layui-icon-list"></i> 翻译
+                                </button>
+                                <button class="layui-btn layui-btn-xs layui-btn-normal" onclick="editKey(${key.id})">
+                                    <i class="layui-icon layui-icon-edit"></i> 编辑
+                                </button>
+                                <button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteKey(${key.id})">
+                                    <i class="layui-icon layui-icon-delete"></i> 删除
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#keyTableBody').html(html);
+            }
+            
+            // 渲染分页
+            function renderPagination(count, page) {
+                laypage.render({
+                    elem: 'pagination',
+                    count: count,
+                    curr: page,
+                    limit: pageSize,
+                    jump: function(obj, first) {
+                        currentPage = obj.curr;
+                        if (!first) {
+                            loadKeys(currentPage, $('#searchInput').val());
+                        }
+                    }
+                });
+            }
+            
+            // 初始化加载
+            loadProjectInfo();
+            loadKeys();
+            
+            // 搜索
+            $('#searchBtn').click(function() {
+                loadKeys(1, $('#searchInput').val());
+            });
+            
+            // 重置搜索
+            $('#resetBtn').click(function() {
+                $('#searchInput').val('');
+                loadKeys(1);
+            });
+            
+            // 回车搜索
+            $('#searchInput').keypress(function(e) {
+                if (e.which === 13) {
+                    $('#searchBtn').click();
+                }
+            });
+            
+            // 添加Key
+            $('#addKey').click(function() {
+                layer.open({
+                    type: 1,
+                    title: '添加Key',
+                    area: ['400px', '300px'],
+                    content: `
+                        <form class="layui-form" style="padding: 20px;">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">Key名称</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="key_name" required lay-verify="required" placeholder="请输入Key名称" class="layui-input">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">注释</label>
+                                <div class="layui-input-block">
+                                    <textarea name="comment" placeholder="请输入注释" class="layui-textarea"></textarea>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button class="layui-btn" lay-submit lay-filter="createKey">确定</button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                </div>
+                            </div>
+                        </form>
+                    `
+                });
+            });
+            
+            // 监听创建Key表单提交
+            form.on('submit(createKey)', function(data) {
+                $.ajax({
+                    url: '/api/projects/' + projectId + '/keys',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data.field),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('创建成功');
+                            layer.closeAll();
+                            loadKeys(currentPage);
+                        } else {
+                            layer.msg(res.error || '创建失败');
+                        }
+                    }
+                });
+                return false;
+            });
+        });
+        
+        // 查看翻译
+        function viewTranslations(keyId) {
+            window.location.href = '/projects/' + projectId + '/keys/' + keyId + '/translations';
+        }
+        
+        // 编辑Key
+        function editKey(keyId) {
+            // 获取Key详情
+            $.get('/api/projects/' + projectId + '/keys', {limit: 1000}, function(res) {
+                if (res.code === 0) {
+                    var key = res.data.find(k => k.id == keyId);
+                    if (key) {
+                        layui.layer.open({
+                            type: 1,
+                            title: '编辑Key',
+                            area: ['400px', '300px'],
+                            content: `
+                                <form class="layui-form" style="padding: 20px;">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">Key名称</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="key_name" value="${key.key_name}" required lay-verify="required" placeholder="请输入Key名称" class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">注释</label>
+                                        <div class="layui-input-block">
+                                            <textarea name="comment" placeholder="请输入注释" class="layui-textarea">${key.comment || ''}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <div class="layui-input-block">
+                                            <button class="layui-btn" lay-submit lay-filter="updateKey" data-id="${keyId}">确定</button>
+                                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            `
+                        });
+                    }
+                }
+            });
+        }
+        
+        // 删除Key
+        function deleteKey(keyId) {
+            layui.layer.confirm('确定删除此Key吗？这将删除所有相关的翻译数据。', {
+                btn: ['确定', '取消']
+            }, function() {
+                $.ajax({
+                    url: '/api/keys/' + keyId,
+                    type: 'DELETE',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layui.layer.msg('删除成功');
+                            layui.layer.closeAll();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layui.layer.msg(res.error || '删除失败');
+                        }
+                    }
+                });
+            });
+        }
+        
+        // 监听更新Key表单提交
+        layui.use(['form'], function(){
+            var form = layui.form;
+            form.on('submit(updateKey)', function(data) {
+                var keyId = $(this).data('id');
+                $.ajax({
+                    url: '/api/keys/' + keyId,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data.field),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layui.layer.msg('更新成功');
+                            layui.layer.closeAll();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layui.layer.msg(res.error || '更新失败');
+                        }
+                    }
+                });
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>
