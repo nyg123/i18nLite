@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译管理 - I18nLite</title>
+    <link rel="stylesheet" href="static/layui/css/layui.css">
+    <link rel="stylesheet" href="static/css/app.css">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="layui-header" style="background-color: #393D49;">
+        <div class="layui-logo">
+            <i class="layui-icon layui-icon-translate" style="font-size: 24px; color: #fff;"></i>
+            I18nLite - 翻译管理
+        </div>
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item"><a href="index.html">返回首页</a></li>
+            <li class="layui-nav-item layui-this"><a href="javascript:;">翻译管理</a></li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;" class="layui-icon layui-icon-refresh" id="refresh-btn" title="刷新"></a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 主体内容 -->
+    <div class="layui-container" style="margin-top: 20px;">
+        <!-- 翻译管理页面 -->
+        <div id="translations-page" class="page-content">
+            <div class="layui-row">
+                <div class="layui-col-md12">
+                    <div class="layui-card">
+                        <div class="layui-card-header">
+                            <div class="layui-row">
+                                <div class="layui-col-md6">
+                                    <h2>翻译管理</h2>
+                                    <p id="project-info" style="color: #666; margin-top: 5px;">项目：<span id="current-project-name">加载中...</span></p>
+                                </div>
+                                <div class="layui-col-md6" style="text-align: right;">
+                                    <button class="layui-btn layui-btn-normal" id="add-key-btn">
+                                        <i class="layui-icon layui-icon-add-1"></i> 新建Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-card-body">
+                            <!-- Key搜索 -->
+                            <div class="layui-form layui-form-pane" style="margin-bottom: 20px;">
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <input type="text" id="key-search" placeholder="搜索Key名称..." class="layui-input">
+                                    </div>
+                                    <div class="layui-inline">
+                                        <button class="layui-btn" id="search-key-btn">搜索</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Key列表 -->
+                            <table id="keys-table" lay-filter="keys-table"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建/编辑Key弹窗 -->
+    <div id="key-form-modal" style="display: none; padding: 20px;">
+        <form class="layui-form" id="key-form">
+            <input type="hidden" name="id" id="key-id">
+            <input type="hidden" name="project_id" id="key-project-id">
+            <div class="layui-form-item">
+                <label class="layui-form-label">Key名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="key_name" required lay-verify="required" placeholder="请输入Key名称" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">Key描述</label>
+                <div class="layui-input-block">
+                    <textarea name="description" placeholder="请输入Key描述" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="key-submit">提交</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 翻译编辑弹窗 -->
+    <div id="translation-form-modal" style="display: none; padding: 20px;">
+        <form class="layui-form" id="translation-form">
+            <input type="hidden" name="key_id" id="translation-key-id">
+            <div id="translation-inputs"></div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="translation-submit">保存翻译</button>
+                    <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="static/layui/layui.js"></script>
+    <script src="static/js/utils.js"></script>
+    <script src="static/js/translation-manager.js"></script>
+    <script src="static/js/translations-page.js"></script>
+</body>
+</html>

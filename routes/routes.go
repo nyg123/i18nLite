@@ -33,12 +33,15 @@ func SetupRoutes(r *gin.Engine) {
 		{
 			projects.GET("", controllers.GetProjects)
 			projects.POST("", controllers.CreateProject)
-			projects.PUT("/:id", controllers.UpdateProject)
-			projects.DELETE("/:id", controllers.DeleteProject)
 
-			// Key 管理 API
+			// Key 管理 API（使用项目ID作为路径参数）
 			projects.GET("/:projectId/keys", controllers.GetKeys)
 			projects.POST("/:projectId/keys", controllers.CreateKey)
+
+			// 单个项目操作（使用不同的路径避免冲突）
+			projects.GET("/detail/:id", controllers.GetProject)
+			projects.PUT("/:id", controllers.UpdateProject)
+			projects.DELETE("/:id", controllers.DeleteProject)
 
 			// 导入导出 API (待实现)
 			// projects.POST("/:projectId/import/po", controllers.ImportPO)

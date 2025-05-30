@@ -12,10 +12,7 @@ I18nLite 是一个前后端分离的多语言管理工具，支持多项目、�
 - GORM ORM
 
 ### 前端
-- React 18
-- Ant Design UI组件库
-- React Router
-- Axios
+- Layui (UI框架)
 
 ### 部署
 - Nginx (反向代理)
@@ -26,7 +23,6 @@ I18nLite 是一个前后端分离的多语言管理工具，支持多项目、�
 
 #### 安装依赖
 - Go 1.24+
-- Node.js 18+
 - MySQL 8.0+
 
 #### 数据库准备
@@ -56,20 +52,6 @@ go run main.go
 
 后端服务将在 http://localhost:8000 启动
 
-### 3. 前端启动
-
-```bash
-# 进入前端目录
-cd c:\www\tmp\I18nLite\frontend
-
-# 安装npm依赖
-npm install
-
-# 启动开发服务器
-npm start
-```
-
-前端服务将在 http://localhost:3000 启动
 
 ### 4. 访问应用
 
@@ -152,7 +134,7 @@ set CONFIG_FILE=config/config.local.yaml
 ├── database/        # 数据库连接
 ├── models/          # 数据模型
 ├── routes/          # 路由配置
-├── frontend/        # 前端React项目
+    web/             # 前端静态文件
 ├── nginx/           # Nginx配置
 ├── sql/             # SQL脚本
 └── main.go          # 入口文件
@@ -165,24 +147,3 @@ set CONFIG_FILE=config/config.local.yaml
 - http://127.0.0.1:3000
 - http://127.0.0.1:8080
 
-### 前端代理配置
-前端package.json中配置了代理，开发时API请求会自动代理到后端：
-```json
-"proxy": "http://localhost:8000"
-```
-
-## 常见问题
-
-### 1. 数据库连接失败
-- 检查MySQL服务是否启动
-- 检查数据库用户名密码是否正确
-- 检查数据库是否存在
-
-### 2. 前端无法访问后端API
-- 检查后端服务是否在8000端口启动
-- 检查CORS配置是否正确
-- 检查前端代理配置
-
-### 3. 依赖安装失败
-- Go依赖：运行 `go mod tidy`
-- Node依赖：删除node_modules文件夹，重新运行 `npm install`

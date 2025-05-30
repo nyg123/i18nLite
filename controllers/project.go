@@ -43,12 +43,34 @@ func GetProjects(c *gin.Context) {
 	})
 }
 
+// GetProject 获取单个项目详情
+func GetProject(c *gin.Context) {
+	id := c.Param("id")
+	var project models.Project
+
+	if err := database.DB.First(&project, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "项目不存在"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "success",
+		"data": project,
+	})
+}
+
 // CreateProject 创建项目
 func CreateProject(c *gin.Context) {
-	var project models.Project
-	if err := c.ShouldBindJSON(&project); err != nil {
+	var req models.ProjectCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	project := models.Project{
+		Name:        req.Name,
+		Description: req.Description,
 	}
 
 	if err := database.DB.Create(&project).Error; err != nil {
@@ -73,10 +95,15 @@ func UpdateProject(c *gin.Context) {
 		return
 	}
 
-	var updateData models.Project
-	if err := c.ShouldBindJSON(&updateData); err != nil {
+	var req models.ProjectUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	updateData := models.Project{
+		Name:        req.Name,
+		Description: req.Description,
 	}
 
 	if err := database.DB.Model(&project).Updates(updateData).Error; err != nil {

@@ -16,6 +16,18 @@ type Project struct {
 	TranslationKeys []TranslationKey `json:"translation_keys,omitempty" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE"`
 }
 
+// ProjectCreateRequest 创建项目请求结构体
+type ProjectCreateRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+// ProjectUpdateRequest 更新项目请求结构体
+type ProjectUpdateRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
 // TranslationKey Key表
 type TranslationKey struct {
 	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`

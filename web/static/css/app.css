@@ -1,0 +1,368 @@
+/* 全局样式 */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Microsoft YaHei', sans-serif;
+}
+
+.layui-header {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.layui-logo {
+    width: 200px;
+    line-height: 60px;
+    text-align: left;
+    font-size: 18px;
+    color: #fff;
+    font-weight: bold;
+    padding-left: 20px;
+}
+
+.layui-nav {
+    background: none;
+}
+
+.layui-nav .layui-nav-item a {
+    color: #fff;
+}
+
+.layui-nav .layui-this a {
+    background-color: #5FB878;
+}
+
+/* 容器样式 */
+.layui-container {
+    max-width: 1200px;
+    padding: 0 15px;
+}
+
+/* 卡片样式 */
+.layui-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: none;
+    margin-bottom: 20px;
+}
+
+.layui-card-header {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px 8px 0 0;
+}
+
+.layui-card-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.layui-card-body {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 0 0 8px 8px;
+}
+
+/* 按钮样式 */
+.layui-btn {
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.layui-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* 表格样式 */
+.layui-table {
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.layui-table th {
+    background-color: #f8f9fa;
+    color: #666;
+    font-weight: 500;
+}
+
+.layui-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* 项目表格行高设置 */
+#projects-table .layui-table-body tr {
+    height: 60px;
+}
+
+#projects-table .layui-table-body td {
+    height: 60px;
+    line-height: 60px;
+    vertical-align: middle;
+}
+
+/* 操作按钮在表格中的样式调整 */
+#projects-table .action-buttons {
+    line-height: normal;
+}
+
+#projects-table .action-buttons .layui-btn {
+    margin: 2px;
+    vertical-align: middle;
+}
+
+/* 表单样式 */
+.layui-form-label {
+    width: 100px;
+    color: #666;
+    font-weight: 500;
+}
+
+.layui-input, .layui-textarea, .layui-select {
+    border-radius: 4px;
+    border: 1px solid #e6e6e6;
+    transition: border-color 0.3s;
+}
+
+.layui-input:focus, .layui-textarea:focus {
+    border-color: #5FB878;
+    box-shadow: 0 0 0 2px rgba(95, 184, 120, 0.1);
+}
+
+/* 搜索框样式 */
+.layui-form-pane .layui-form-item {
+    margin-bottom: 0;
+}
+
+.layui-inline {
+    margin-right: 10px;
+}
+
+/* 页面内容切换 */
+.page-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 状态标签 */
+.status-tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #fff;
+}
+
+.status-active {
+    background-color: #5FB878;
+}
+
+.status-inactive {
+    background-color: #FF5722;
+}
+
+/* 操作按钮组 */
+.action-buttons {
+    white-space: nowrap;
+}
+
+.action-buttons .layui-btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    padding: 4px 16px;
+    font-size: 12px;
+    height: 32px;
+}
+
+/* 语言标签 */
+.language-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.language-tag {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    border: 1px solid #91d5ff;
+}
+
+/* 翻译状态 */
+.translation-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.translation-complete {
+    background-color: #52c41a;
+}
+
+.translation-partial {
+    background-color: #faad14;
+}
+
+.translation-empty {
+    background-color: #f5222d;
+}
+
+/* 进度条 */
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #5FB878;
+    transition: width 0.3s ease;
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-state .layui-icon {
+    font-size: 64px;
+    color: #e6e6e6;
+    margin-bottom: 20px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    margin: 10px 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .layui-container {
+        padding: 0 10px;
+    }
+    
+    .layui-card-header .layui-row .layui-col-md6:last-child {
+        text-align: left;
+        margin-top: 10px;
+    }
+    
+    .layui-form-pane .layui-inline {
+        display: block;
+        margin-bottom: 10px;
+    }
+    
+    .action-buttons .layui-btn {
+        margin-bottom: 5px;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    text-align: center;
+    padding: 40px;
+}
+
+.loading .layui-icon {
+    font-size: 32px;
+    color: #5FB878;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0,0,0,0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* 表格行选中状态 */
+.layui-table tbody tr.layui-table-click {
+    background-color: #e6f7ff;
+}
+
+/* 翻译编辑器 */
+.translation-editor {
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.translation-editor-header {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e6e6e6;
+    font-weight: 500;
+    color: #666;
+}
+
+.translation-editor-body {
+    padding: 15px;
+}
+
+.translation-editor-body textarea {
+    border: none;
+    box-shadow: none;
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* 统计卡片 */
+.stats-card {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.stats-number {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stats-label {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
