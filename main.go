@@ -7,6 +7,7 @@ import (
 	"I18nLite/config"
 	"I18nLite/database"
 	"I18nLite/routes"
+	"I18nLite/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +15,9 @@ import (
 func main() {
 	// 初始化配置
 	config.Init()
+
+	// 初始化日志系统
+	utils.InitLogger()
 
 	// 设置Gin模式
 	gin.SetMode(config.Cfg.Server.Mode)

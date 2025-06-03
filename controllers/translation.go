@@ -14,9 +14,9 @@ import (
 
 	"I18nLite/database"
 	"I18nLite/models"
+	"I18nLite/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/leonelquinteros/gotext"
 )
 
 // GetTranslations 获取指定Key的所有翻译
@@ -254,12 +254,15 @@ func ImportPOFiles(c *gin.Context) {
 		defer file.Close()
 
 		// 解析PO文件
+		utils.Debug("开始解析PO文件: %s, 语言: %s", fileHeader.Filename, lang)
 		poEntries, err := parsePOFileWithGotext(file)
 		if err != nil {
+			utils.Error("解析PO文件失败: %v", err)
 			result["message"] = fmt.Sprintf("解析PO文件失败: %v", err)
 			results = append(results, result)
 			continue
 		}
+		utils.Debug("PO文件解析完成，共找到 %d 个条目", len(poEntries))
 
 		fileKeys := 0
 		fileTranslations := 0
@@ -271,25 +274,50 @@ func ImportPOFiles(c *gin.Context) {
 				continue // 跳过空的条目
 			}
 
+			utils.Debug("处理条目: MsgID=%q, MsgStr=%q, Comment=%q", entry.MsgID, entry.MsgStr, entry.Comment)
+
 			// 查找或创建Key
 			var translationKey models.TranslationKey
 			err := tx.Where("project_id = ? AND key_name = ?", projectID, entry.MsgID).First(&translationKey).Error
 
 			if err != nil {
-				// 创建新Key
+				// 创建新Key，包含注释
+				utils.Debug("创建新Key: %s, 注释: %q", entry.MsgID, entry.Comment)
 				translationKey = models.TranslationKey{
 					ProjectID: projectID,
 					KeyName:   entry.MsgID,
 					Comment:   entry.Comment,
 				}
 				if err := tx.Create(&translationKey).Error; err != nil {
+					utils.Error("创建Key失败: %v", err)
 					result["message"] = fmt.Sprintf("创建Key失败: %v", err)
 					tx.Rollback()
 					results = append(results, result)
 					continue
 				}
+				utils.Debug("新Key创建成功: ID=%d", translationKey.ID)
 				fileNewKeys++
 				newKeys++
+			} else {
+				// 如果Key已存在，检查并更新注释
+				utils.Debug("Key已存在: %s", entry.MsgID)
+				utils.Debug("数据库中的注释: %q", translationKey.Comment)
+				utils.Debug("PO文件中的注释: %q", entry.Comment)
+
+				// 只要注释内容不同就更新（包括从有注释变为无注释，或从无注释变为有注释）
+				if translationKey.Comment != entry.Comment {
+					utils.Debug("注释不同，开始更新...")
+					if err := tx.Model(&translationKey).Update("comment", entry.Comment).Error; err != nil {
+						utils.Error("更新Key注释失败: %v", err)
+						result["message"] = fmt.Sprintf("更新Key注释失败: %v", err)
+						tx.Rollback()
+						results = append(results, result)
+						continue
+					}
+					utils.Debug("注释更新成功: %s -> %q", entry.MsgID, entry.Comment)
+				} else {
+					utils.Debug("注释相同，无需更新")
+				}
 			}
 			fileKeys++
 			totalKeys++
@@ -368,7 +396,7 @@ type POEntry struct {
 	MsgStr  string
 }
 
-// parsePOFileWithGotext 使用gotext库解析PO文件内容
+// parsePOFileWithGotext 使用自定义解析器解析PO文件内容（包含注释）
 func parsePOFileWithGotext(file multipart.File) ([]POEntry, error) {
 	// 读取文件内容到字节切片
 	content, err := io.ReadAll(file)
@@ -376,36 +404,121 @@ func parsePOFileWithGotext(file multipart.File) ([]POEntry, error) {
 		return nil, fmt.Errorf("读取文件内容失败: %v", err)
 	}
 
-	// 创建一个新的Po对象
-	po := gotext.NewPo()
+	// 使用自定义解析器解析PO文件
+	return parsePOContent(string(content))
+}
 
-	// 解析PO文件内容
-	po.Parse(content)
-
+// parsePOContent 自定义PO文件解析器，支持注释
+func parsePOContent(content string) ([]POEntry, error) {
 	var entries []POEntry
+	lines := strings.Split(content, "\n")
 
-	// 获取所有的翻译条目
-	for _, translation := range po.GetDomain().GetTranslations() {
-		msgid := translation.ID
-		msgstr := translation.Get()
+	var currentEntry POEntry
+	var comments []string
+	inMsgID := false
+	inMsgStr := false
 
-		// 跳过空的msgid（通常是文件头）
-		if msgid == "" {
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// 跳过空行
+		if line == "" {
+			// 如果有完整的条目，保存它
+			if currentEntry.MsgID != "" {
+				currentEntry.Comment = strings.Join(comments, "\n")
+				entries = append(entries, currentEntry)
+				currentEntry = POEntry{}
+				comments = []string{}
+			}
+			inMsgID = false
+			inMsgStr = false
 			continue
 		}
 
-		entry := POEntry{
-			MsgID:  msgid,
-			MsgStr: msgstr,
-			// gotext库可能不直接提供注释，我们暂时留空
-			// 如果需要注释，可能需要使用其他方法或保留部分自定义解析
-			Comment: "",
+		// 处理注释行
+		if strings.HasPrefix(line, "#") {
+			comment := strings.TrimSpace(line[1:]) // 去掉 # 号和前导空格
+			if comment != "" {                     // 只保存非空注释
+				comments = append(comments, comment)
+				utils.Debug("发现注释: %q", comment)
+			}
+			continue
 		}
 
-		entries = append(entries, entry)
+		// 处理 msgid
+		if strings.HasPrefix(line, "msgid ") {
+			if currentEntry.MsgID != "" {
+				// 保存之前的条目
+				currentEntry.Comment = strings.Join(comments, "\n")
+				entries = append(entries, currentEntry)
+				currentEntry = POEntry{}
+				comments = []string{}
+			}
+
+			msgid, err := parsePOString(line[6:]) // 去掉 "msgid "
+			if err != nil {
+				return nil, fmt.Errorf("解析msgid失败，行 %d: %v", i+1, err)
+			}
+			currentEntry.MsgID = msgid
+			inMsgID = true
+			inMsgStr = false
+			continue
+		}
+
+		// 处理 msgstr
+		if strings.HasPrefix(line, "msgstr ") {
+			msgstr, err := parsePOString(line[7:]) // 去掉 "msgstr "
+			if err != nil {
+				return nil, fmt.Errorf("解析msgstr失败，行 %d: %v", i+1, err)
+			}
+			currentEntry.MsgStr = msgstr
+			inMsgID = false
+			inMsgStr = true
+			continue
+		}
+
+		// 处理多行字符串
+		if strings.HasPrefix(line, "\"") && strings.HasSuffix(line, "\"") {
+			str, err := parsePOString(line)
+			if err != nil {
+				return nil, fmt.Errorf("解析字符串失败，行 %d: %v", i+1, err)
+			}
+
+			if inMsgID {
+				currentEntry.MsgID += str
+			} else if inMsgStr {
+				currentEntry.MsgStr += str
+			}
+		}
+	}
+
+	// 保存最后一个条目
+	if currentEntry.MsgID != "" {
+		currentEntry.Comment = strings.Join(comments, "\n")
+		entries = append(entries, currentEntry)
 	}
 
 	return entries, nil
+}
+
+// parsePOString 解析PO文件中的字符串（处理转义字符）
+func parsePOString(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "\"") || !strings.HasSuffix(s, "\"") {
+		return "", fmt.Errorf("字符串必须以引号包围")
+	}
+
+	// 去掉首尾引号
+	s = s[1 : len(s)-1]
+
+	// 处理转义字符
+	s = strings.ReplaceAll(s, "\\n", "\n")
+	s = strings.ReplaceAll(s, "\\r", "\r")
+	s = strings.ReplaceAll(s, "\\t", "\t")
+	s = strings.ReplaceAll(s, "\\\"", "\"")
+	s = strings.ReplaceAll(s, "\\\\", "\\")
+
+	return s, nil
 }
 
 // extractLanguageFromFilename 从文件名中提取语言代码
@@ -538,7 +651,10 @@ func generatePOContent(project models.Project, keys []models.TranslationKey, lan
 		if key.Comment != "" {
 			lines := strings.Split(key.Comment, "\n")
 			for _, line := range lines {
-				content.WriteString("# " + line + "\n")
+				line = strings.TrimSpace(line)
+				if line != "" {
+					content.WriteString("# " + line + "\n")
+				}
 			}
 		}
 

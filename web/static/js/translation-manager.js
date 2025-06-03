@@ -4,13 +4,15 @@ window.TranslationManager = {
     
     // 初始化Keys表格
     initKeysTable: function() {
-        const table = layui.table;        this.keysTable = table.render({
+        const table = layui.table;
+        
+        this.keysTable = table.render({
             elem: '#keys-table',
             url: '', // 初始化时不设置URL，后续通过reload方法设置
             cols: [[
                 {field: 'id', title: 'ID', width: 80, align: 'center'},
                 {field: 'key_name', title: 'Key名称', width: 200},
-                {field: 'description', title: '描述', minWidth: 100},
+                {field: 'comment', title: '描述', minWidth: 100},
                 {field: 'translation_status', title: '翻译状态', width: 120, align: 'center', templet: function(d) {
                     const status = I18nUtils.getTranslationStatus(d);
                     return `<span class="translation-status ${status.class}"></span>${status.text}`;
@@ -112,10 +114,9 @@ window.TranslationManager = {
                 layui.form.render();
             }
         });
-    },
-
-    // 编辑Key
-    editKey: function(data) {        layui.layer.open({
+    },    // 编辑Key
+    editKey: function(data) {
+        layui.layer.open({
             type: 1,
             title: '编辑Key',
             content: layui.jquery('#key-form-modal'),
@@ -126,7 +127,7 @@ window.TranslationManager = {
                 document.getElementById('key-id').value = data.id;
                 document.getElementById('key-project-id').value = data.project_id;
                 document.querySelector('input[name="key_name"]').value = data.key_name;
-                document.querySelector('textarea[name="description"]').value = data.description;
+                document.querySelector('textarea[name="comment"]').value = data.comment;
                 layui.form.render();
             }
         });

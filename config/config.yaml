@@ -19,7 +19,7 @@ upload:
   temp_dir: "./temp"
 
 log:
-  level: info # debug, info, warn, error
+  level: debug # debug, info, warn, error
   file: "./logs/app.log"
   max_size: 100 # MB
   max_backups: 3
