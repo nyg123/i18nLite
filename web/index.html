@@ -123,6 +123,13 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">支持语言</label>
+                <div class="layui-input-block">
+                    <input type="text" name="languages" required lay-verify="required" placeholder="请输入支持的语言，用逗号分隔，如：zh,en,fr" class="layui-input">
+                    <div class="layui-form-mid layui-word-aux">支持的语言代码，用逗号分隔</div>
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button class="layui-btn" lay-submit lay-filter="project-submit">提交</button>
                     <button type="reset" class="layui-btn layui-btn-primary">重置</button>

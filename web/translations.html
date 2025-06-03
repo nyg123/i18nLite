@@ -37,10 +37,12 @@
                                 <div class="layui-col-md6">
                                     <h2>翻译管理</h2>
                                     <p id="project-info" style="color: #666; margin-top: 5px;">项目：<span id="current-project-name">加载中...</span></p>
-                                </div>
-                                <div class="layui-col-md6" style="text-align: right;">
+                                </div>                                <div class="layui-col-md6" style="text-align: right;">
                                     <button class="layui-btn layui-btn-normal" id="add-key-btn">
                                         <i class="layui-icon layui-icon-add-1"></i> 新建Key
+                                    </button>
+                                    <button class="layui-btn layui-btn-warm" id="import-po-btn">
+                                        <i class="layui-icon layui-icon-upload"></i> 导入PO文件
                                     </button>
                                 </div>
                             </div>
@@ -91,9 +93,7 @@
                 </div>
             </div>
         </form>
-    </div>
-
-    <!-- 翻译编辑弹窗 -->
+    </div>    <!-- 翻译编辑弹窗 -->
     <div id="translation-form-modal" style="display: none; padding: 20px;">
         <form class="layui-form" id="translation-form">
             <input type="hidden" name="key_id" id="translation-key-id">
@@ -101,6 +101,42 @@
             <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button class="layui-btn" lay-submit lay-filter="translation-submit">保存翻译</button>
+                    <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- PO文件导入弹窗 -->
+    <div id="import-po-modal" style="display: none; padding: 20px;">
+        <form class="layui-form" id="import-po-form">
+            <div class="layui-form-item">
+                <label class="layui-form-label">选择PO文件</label>
+                <div class="layui-input-block">
+                    <div class="layui-upload-drag" id="po-file-upload">
+                        <i class="layui-icon layui-icon-upload"></i>
+                        <p>点击上传，或将PO文件拖拽到此处</p>
+                        <div class="layui-hide" id="po-upload-list">
+                            <blockquote class="layui-elem-quote layui-quote-nm">预览文件列表</blockquote>
+                            <div class="layui-upload-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <div style="color: #666; font-size: 12px; line-height: 1.5;">
+                        <p><strong>说明：</strong></p>
+                        <p>• 文件名格式：语言代码.po，如 en.po、zh-CN.po、fr.po</p>
+                        <p>• 支持批量上传多个语言的PO文件</p>
+                        <p>• 相同的key会更新翻译，新的key会自动创建</p>
+                        <p>• 请确保PO文件格式正确</p>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" id="start-import-btn">开始导入</button>
                     <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
                 </div>
             </div>

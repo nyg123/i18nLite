@@ -71,6 +71,7 @@ func CreateProject(c *gin.Context) {
 	project := models.Project{
 		Name:        req.Name,
 		Description: req.Description,
+		Languages:   req.Languages,
 	}
 
 	if err := database.DB.Create(&project).Error; err != nil {
@@ -104,6 +105,7 @@ func UpdateProject(c *gin.Context) {
 	updateData := models.Project{
 		Name:        req.Name,
 		Description: req.Description,
+		Languages:   req.Languages,
 	}
 
 	if err := database.DB.Model(&project).Updates(updateData).Error; err != nil {

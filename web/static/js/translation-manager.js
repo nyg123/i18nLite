@@ -4,14 +4,13 @@ window.TranslationManager = {
     
     // 初始化Keys表格
     initKeysTable: function() {
-        const table = layui.table;
-        
-        this.keysTable = table.render({
+        const table = layui.table;        this.keysTable = table.render({
             elem: '#keys-table',
+            url: '', // 初始化时不设置URL，后续通过reload方法设置
             cols: [[
                 {field: 'id', title: 'ID', width: 80, align: 'center'},
                 {field: 'key_name', title: 'Key名称', width: 200},
-                {field: 'description', title: '描述', minWidth: 200},
+                {field: 'description', title: '描述', minWidth: 100},
                 {field: 'translation_status', title: '翻译状态', width: 120, align: 'center', templet: function(d) {
                     const status = I18nUtils.getTranslationStatus(d);
                     return `<span class="translation-status ${status.class}"></span>${status.text}`;
@@ -28,12 +27,22 @@ window.TranslationManager = {
                 {field: 'created_at', title: '创建时间', width: 160, templet: function(d) {
                     return I18nUtils.formatDateTime(d.created_at);
                 }},
-                {title: '操作', width: 200, align: 'center', toolbar: '#keyOperations'}
+                {title: '操作', width: 300, align: 'center', toolbar: '#keyOperations'}
             ]],
-            data: [],
             page: true,
             limit: 10,
             limits: [10, 20, 50],
+            request: {
+                pageName: 'page',
+                limitName: 'limit'
+            },
+            response: {
+                statusName: 'code',
+                statusCode: 0,
+                msgName: 'msg',
+                countName: 'count',
+                dataName: 'data'
+            },
             text: {
                 none: '<div class="empty-state"><i class="layui-icon layui-icon-file"></i><p>暂无Key数据</p><p>请先选择项目，然后添加翻译Key</p></div>'
             }
@@ -74,20 +83,14 @@ window.TranslationManager = {
                 this.editTranslations(data);
             }
         });
-    },
-
-    // 加载Keys
-    loadKeys: function(projectId) {
-        I18nUtils.request(`${I18nUtils.API_BASE_URL}/projects/${projectId}/keys`)
-            .then(response => response.json())
-            .then((response) => {
-                this.keysTable.reload({
-                    data: response.data || []
-                });
-            })
-            .catch(() => {
-                I18nUtils.showMessage('加载Key列表失败', 'error');
-            });
+    },    // 加载Keys
+    loadKeys: function(projectId, searchKeyword = '') {
+        const url = `${I18nUtils.API_BASE_URL}/projects/${projectId}/keys`;
+        
+        this.keysTable.reload({
+            url: url,
+            where: searchKeyword ? {search: searchKeyword} : {}
+        });
     },
 
     // 新建Key
@@ -127,9 +130,7 @@ window.TranslationManager = {
                 layui.form.render();
             }
         });
-    },
-
-    // 删除Key
+    },    // 删除Key
     deleteKey: function(data) {
         I18nUtils.confirm('确定要删除这个Key吗？', () => {
             I18nUtils.request(`${I18nUtils.API_BASE_URL}/keys/${data.id}`, {
@@ -147,9 +148,7 @@ window.TranslationManager = {
                 I18nUtils.showMessage('删除失败', 'error');
             });
         }, '确认删除');
-    },
-
-    // 提交Key表单
+    },    // 提交Key表单
     submitKey: function(data) {
         const isEdit = !!data.id;
         const url = isEdit ? 
@@ -173,7 +172,8 @@ window.TranslationManager = {
         .catch(() => {
             I18nUtils.showMessage(isEdit ? '更新失败' : '创建失败', 'error');
         });
-    },    // 编辑翻译
+    },
+    // 编辑翻译
     editTranslations: function(keyData) {
         const currentProjectId = window.I18nApp.getCurrentProject();
         
@@ -200,12 +200,10 @@ window.TranslationManager = {
     // 显示翻译编辑弹窗
     showTranslationModal: function(keyData, languages, translations) {
         const translationInputs = document.getElementById('translation-inputs');
-        translationInputs.innerHTML = '';
-
-        languages.forEach((lang) => {
+        translationInputs.innerHTML = '';        languages.forEach((lang) => {
             const langCode = lang.trim();
-            const translation = translations.find(t => t.language === langCode);
-            const value = translation ? translation.content : '';
+            const translation = translations.find(t => t.lang === langCode);
+            const value = translation ? translation.translation : '';
 
             const editorDiv = document.createElement('div');
             editorDiv.className = 'translation-editor';
@@ -216,7 +214,7 @@ window.TranslationManager = {
                 </div>
             `;
             translationInputs.appendChild(editorDiv);
-        });        layui.layer.open({
+        });layui.layer.open({
             type: 1,
             title: `编辑翻译 - ${keyData.key_name}`,
             content: layui.jquery('#translation-form-modal'),
@@ -227,9 +225,7 @@ window.TranslationManager = {
                 layui.form.render();
             }
         });
-    },
-
-    // 提交翻译
+    },    // 提交翻译
     submitTranslations: function(data) {
         const keyId = data.key_id;
         const translations = [];
@@ -256,7 +252,9 @@ window.TranslationManager = {
             if (response.ok) {
                 I18nUtils.showMessage('翻译保存成功');
                 layui.layer.closeAll();
-                this.loadKeys(window.I18nApp.getCurrentProject());
+                // 重新加载数据以确保翻译进度正确更新
+                const currentProjectId = window.I18nApp.getCurrentProject();
+                this.loadKeys(currentProjectId);
             } else {
                 I18nUtils.showMessage('翻译保存失败', 'error');
             }
@@ -264,9 +262,7 @@ window.TranslationManager = {
         .catch(() => {
             I18nUtils.showMessage('翻译保存失败', 'error');
         });
-    },
-
-    // 搜索Keys
+    },// 搜索Keys
     search: function(keyword) {
         const currentProjectId = window.I18nApp.getCurrentProject();
         if (!currentProjectId) {
@@ -274,12 +270,6 @@ window.TranslationManager = {
             return;
         }
         
-        if (keyword.trim()) {
-            this.keysTable.reload({
-                where: {search: keyword}
-            });
-        } else {
-            this.loadKeys(currentProjectId);
-        }
+        this.loadKeys(currentProjectId, keyword);
     }
 };

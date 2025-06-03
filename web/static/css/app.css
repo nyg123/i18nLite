@@ -201,7 +201,7 @@ body {
     border: 1px solid #91d5ff;
 }
 
-/* 翻译状态 */
+/* 翻译状态样式 */
 .translation-status {
     display: inline-block;
     width: 8px;
@@ -210,30 +210,32 @@ body {
     margin-right: 5px;
 }
 
-.translation-complete {
-    background-color: #52c41a;
+.translation-status.translation-complete {
+    background-color: #5FB878;
 }
 
-.translation-partial {
-    background-color: #faad14;
+.translation-status.translation-partial {
+    background-color: #FFB800;
 }
 
-.translation-empty {
-    background-color: #f5222d;
+.translation-status.translation-empty {
+    background-color: #FF5722;
 }
 
-/* 进度条 */
+/* 翻译进度条样式 */
 .progress-bar {
-    width: 100%;
+    width: 60px;
     height: 6px;
     background-color: #f0f0f0;
     border-radius: 3px;
     overflow: hidden;
+    margin-bottom: 3px;
 }
 
 .progress-fill {
     height: 100%;
-    background-color: #5FB878;
+    background: linear-gradient(90deg, #5FB878 0%, #009688 100%);
+    border-radius: 3px;
     transition: width 0.3s ease;
 }
 

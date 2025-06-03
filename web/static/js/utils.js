@@ -8,25 +8,48 @@ window.I18nUtils = {
         if (!dateString) return '-';
         const date = new Date(dateString);
         return date.toLocaleString('zh-CN');
-    },
-
-    // 获取翻译状态
+    },    // 获取翻译状态
     getTranslationStatus: function(keyData) {
-        // 这里应该根据实际的翻译数据来判断状态
-        // 暂时返回模拟数据
-        const statuses = [
-            {class: 'translation-complete', text: '已完成'},
-            {class: 'translation-partial', text: '部分完成'},
-            {class: 'translation-empty', text: '未翻译'}
-        ];
-        return statuses[Math.floor(Math.random() * statuses.length)];
+        const progress = this.getTranslationProgress(keyData);
+        if (progress === 100) {
+            return {class: 'translation-complete', text: '已完成'};
+        } else if (progress > 0) {
+            return {class: 'translation-partial', text: '部分完成'};
+        } else {
+            return {class: 'translation-empty', text: '未翻译'};
+        }
+    },    // 获取翻译进度
+    getTranslationProgress: function(keyData) {
+        // 获取当前项目的语言数
+        const projectLanguages = this.getProjectLanguages();
+        const languageCount = projectLanguages.length;
+        
+        if (languageCount === 0) {
+            // 如果语言列表还没有加载，暂时返回0，避免除零错误
+            return 0;
+        }
+        
+        // 计算已翻译的语言数
+        const translationCount = keyData.translations ? keyData.translations.length : 0;
+        const progress = Math.round((translationCount / languageCount) * 100);
+        
+        return Math.min(progress, 100);
     },
 
-    // 获取翻译进度
-    getTranslationProgress: function(keyData) {
-        // 这里应该根据实际的翻译数据来计算进度
-        // 暂时返回模拟数据
-        return Math.floor(Math.random() * 101);
+    // 获取当前项目的语言列表（需要从全局状态或缓存中获取）
+    getProjectLanguages: function() {
+        // 从全局缓存中获取当前项目的语言列表
+        if (window.I18nApp && window.I18nApp.currentProjectLanguages) {
+            return window.I18nApp.currentProjectLanguages;
+        }
+        // 如果还没有加载，返回空数组
+        return [];
+    },
+
+    // 设置当前项目的语言列表
+    setProjectLanguages: function(languages) {
+        window.I18nApp = window.I18nApp || {};
+        window.I18nApp.currentProjectLanguages = languages;
     },
 
     // 显示消息

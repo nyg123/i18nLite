@@ -1,13 +1,19 @@
 package controllers
 
 import (
+	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"I18nLite/database"
 	"I18nLite/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/leonelquinteros/gotext"
 )
 
 // GetTranslations 获取指定Key的所有翻译
@@ -20,11 +26,13 @@ func GetTranslations(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "success",
-		"data": translations,
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "success",
+			"data": translations,
+		},
+	)
 }
 
 // CreateTranslation 新增翻译
@@ -50,11 +58,13 @@ func CreateTranslation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "创建成功",
-		"data": translation,
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "创建成功",
+			"data": translation,
+		},
+	)
 }
 
 // UpdateTranslation 更新翻译内容
@@ -78,11 +88,13 @@ func UpdateTranslation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "更新成功",
-		"data": translation,
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "更新成功",
+			"data": translation,
+		},
+	)
 }
 
 // DeleteTranslation 删除翻译
@@ -100,10 +112,12 @@ func DeleteTranslation(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "删除成功",
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "删除成功",
+		},
+	)
 }
 
 // BatchUpdateTranslations 批量更新某Key的所有语言翻译
@@ -159,8 +173,252 @@ func BatchUpdateTranslations(c *gin.Context) {
 
 	tx.Commit()
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "批量更新成功",
-	})
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "批量更新成功",
+		},
+	)
+}
+
+// ImportPOFiles 批量导入PO文件
+func ImportPOFiles(c *gin.Context) {
+	projectIDStr := c.Param("projectId")
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的项目ID"})
+		return
+	}
+
+	// 验证项目是否存在
+	var project models.Project
+	if err := database.DB.First(&project, projectID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "项目不存在"})
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "获取上传文件失败"})
+		return
+	}
+
+	files := form.File["files"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "没有上传文件"})
+		return
+	}
+
+	var results []map[string]interface{}
+	var totalKeys, totalTranslations, newKeys, updatedTranslations int
+
+	// 开始事务
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, fileHeader := range files {
+		result := map[string]interface{}{
+			"filename": fileHeader.Filename,
+			"success":  false,
+			"message":  "",
+			"stats": map[string]int{
+				"keys":         0,
+				"translations": 0,
+				"new_keys":     0,
+				"updated":      0,
+			},
+		}
+
+		// 解析语言代码
+		lang := extractLanguageFromFilename(fileHeader.Filename)
+		if lang == "" {
+			result["message"] = "无法从文件名解析语言代码，文件名应为类似 'en.po' 的格式"
+			results = append(results, result)
+			continue
+		}
+
+		// 打开文件
+		file, err := fileHeader.Open()
+		if err != nil {
+			result["message"] = fmt.Sprintf("打开文件失败: %v", err)
+			results = append(results, result)
+			continue
+		}
+		defer file.Close()
+
+		// 解析PO文件
+		poEntries, err := parsePOFileWithGotext(file)
+		if err != nil {
+			result["message"] = fmt.Sprintf("解析PO文件失败: %v", err)
+			results = append(results, result)
+			continue
+		}
+
+		fileKeys := 0
+		fileTranslations := 0
+		fileNewKeys := 0
+		fileUpdated := 0
+
+		for _, entry := range poEntries {
+			if entry.MsgID == "" || entry.MsgStr == "" {
+				continue // 跳过空的条目
+			}
+
+			// 查找或创建Key
+			var translationKey models.TranslationKey
+			err := tx.Where("project_id = ? AND key_name = ?", projectID, entry.MsgID).First(&translationKey).Error
+
+			if err != nil {
+				// 创建新Key
+				translationKey = models.TranslationKey{
+					ProjectID: projectID,
+					KeyName:   entry.MsgID,
+					Comment:   entry.Comment,
+				}
+				if err := tx.Create(&translationKey).Error; err != nil {
+					result["message"] = fmt.Sprintf("创建Key失败: %v", err)
+					tx.Rollback()
+					results = append(results, result)
+					continue
+				}
+				fileNewKeys++
+				newKeys++
+			}
+			fileKeys++
+			totalKeys++
+
+			// 查找或创建翻译
+			var translation models.Translation
+			err = tx.Where("key_id = ? AND lang = ?", translationKey.ID, lang).First(&translation).Error
+
+			if err != nil {
+				// 创建新翻译
+				translation = models.Translation{
+					KeyID:       translationKey.ID,
+					Lang:        lang,
+					Translation: entry.MsgStr,
+				}
+				if err := tx.Create(&translation).Error; err != nil {
+					result["message"] = fmt.Sprintf("创建翻译失败: %v", err)
+					tx.Rollback()
+					results = append(results, result)
+					continue
+				}
+			} else {
+				// 更新翻译
+				if err := tx.Model(&translation).Update("translation", entry.MsgStr).Error; err != nil {
+					result["message"] = fmt.Sprintf("更新翻译失败: %v", err)
+					tx.Rollback()
+					results = append(results, result)
+					continue
+				}
+				fileUpdated++
+				updatedTranslations++
+			}
+			fileTranslations++
+			totalTranslations++
+		}
+
+		result["success"] = true
+		result["message"] = "导入成功"
+		result["stats"] = map[string]int{
+			"keys":         fileKeys,
+			"translations": fileTranslations,
+			"new_keys":     fileNewKeys,
+			"updated":      fileUpdated,
+		}
+		results = append(results, result)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "提交事务失败"})
+		return
+	}
+
+	c.JSON(
+		http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "PO文件批量导入完成",
+			"data": map[string]interface{}{
+				"results": results,
+				"summary": map[string]int{
+					"total_keys":           totalKeys,
+					"total_translations":   totalTranslations,
+					"new_keys":             newKeys,
+					"updated_translations": updatedTranslations,
+					"files_processed":      len(files),
+				},
+			},
+		},
+	)
+}
+
+// POEntry 表示PO文件中的一个条目
+type POEntry struct {
+	Comment string
+	MsgID   string
+	MsgStr  string
+}
+
+// parsePOFileWithGotext 使用gotext库解析PO文件内容
+func parsePOFileWithGotext(file multipart.File) ([]POEntry, error) {
+	// 读取文件内容到字节切片
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("读取文件内容失败: %v", err)
+	}
+
+	// 创建一个新的Po对象
+	po := gotext.NewPo()
+
+	// 解析PO文件内容
+	po.Parse(content)
+
+	var entries []POEntry
+
+	// 获取所有的翻译条目
+	for _, translation := range po.GetDomain().GetTranslations() {
+		msgid := translation.ID
+		msgstr := translation.Get()
+
+		// 跳过空的msgid（通常是文件头）
+		if msgid == "" {
+			continue
+		}
+
+		entry := POEntry{
+			MsgID:  msgid,
+			MsgStr: msgstr,
+			// gotext库可能不直接提供注释，我们暂时留空
+			// 如果需要注释，可能需要使用其他方法或保留部分自定义解析
+			Comment: "",
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// extractLanguageFromFilename 从文件名中提取语言代码
+func extractLanguageFromFilename(filename string) string {
+	// 支持 en.po, zh-CN.po, zh_CN.po 等格式
+	re := regexp.MustCompile(`([a-z]{2}(?:[-_][A-Z]{2})?).po$`)
+	matches := re.FindStringSubmatch(filename)
+	if len(matches) > 1 {
+		// 将下划线转换为标准的语言代码格式
+		lang := strings.ReplaceAll(matches[1], "_", "-")
+		// 如果是两个字母的语言代码，直接返回
+		if len(lang) == 2 {
+			return lang
+		}
+		// 如果是带地区的代码，保持原样
+		return lang
+	}
+	return ""
 }

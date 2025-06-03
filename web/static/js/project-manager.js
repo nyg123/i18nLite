@@ -6,11 +6,13 @@ window.ProjectManager = {
     initProjectsTable: function() {
         const table = layui.table;        this.projectsTable = table.render({
             elem: '#projects-table',
-            url: `${I18nUtils.API_BASE_URL}/projects`,
-            cols: [[
+            url: `${I18nUtils.API_BASE_URL}/projects`,            cols: [[
                 {field: 'id', title: 'ID', width: 80, align: 'center'},
                 {field: 'name', title: '项目名称', width: 200},
                 {field: 'description', title: '项目描述', minWidth: 100},
+                {field: 'languages', title: '支持语言', width: 150, templet: function(d) {
+                    return d.languages ? d.languages.replace(/,/g, ', ') : '未设置';
+                }},
                 {field: 'created_at', title: '创建时间', width: 160, templet: function(d) {
                     return I18nUtils.formatDateTime(d.created_at);
                 }},
@@ -87,12 +89,12 @@ window.ProjectManager = {
             title: '编辑项目',
             content: layui.jquery('#project-form-modal'),
             area: ['500px', '350px'],
-            btn: false,
-            success: function() {
+            btn: false,            success: function() {
                 document.getElementById('project-form').reset();
                 document.getElementById('project-id').value = data.id;
                 document.querySelector('input[name="name"]').value = data.name;
                 document.querySelector('textarea[name="description"]').value = data.description;
+                document.querySelector('input[name="languages"]').value = data.languages || '';
                 layui.form.render();
             }
         });

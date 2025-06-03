@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `languages` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '支持的语言列表，逗号分隔',
   `created_at` datetime(3) DEFAULT NULL,
   `updated_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),

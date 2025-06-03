@@ -43,8 +43,8 @@ func SetupRoutes(r *gin.Engine) {
 			projects.PUT("/:id", controllers.UpdateProject)
 			projects.DELETE("/:id", controllers.DeleteProject)
 
-			// 导入导出 API (待实现)
-			// projects.POST("/:projectId/import/po", controllers.ImportPO)
+			// 导入导出 API
+			projects.POST("/:projectId/import/po", controllers.ImportPOFiles)
 			// projects.POST("/:projectId/import/excel", controllers.ImportExcel)
 			// projects.GET("/:projectId/export/po", controllers.ExportPO)
 			// projects.GET("/:projectId/export/excel", controllers.ExportExcel)

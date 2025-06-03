@@ -9,6 +9,7 @@ type Project struct {
 	ID          uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string    `json:"name" gorm:"type:varchar(128);not null;uniqueIndex" binding:"required"`
 	Description string    `json:"description" gorm:"type:text"`
+	Languages   string    `json:"languages" gorm:"type:varchar(500);comment:支持的语言列表，逗号分隔"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
@@ -20,12 +21,14 @@ type Project struct {
 type ProjectCreateRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	Languages   string `json:"languages" binding:"required"`
 }
 
 // ProjectUpdateRequest 更新项目请求结构体
 type ProjectUpdateRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	Languages   string `json:"languages" binding:"required"`
 }
 
 // TranslationKey Key表
