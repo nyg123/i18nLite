@@ -640,9 +640,9 @@ func generatePOContent(project models.Project, keys []models.TranslationKey, lan
 	content.WriteString("\"Content-Transfer-Encoding: 8bit\\n\"\n")
 	content.WriteString("\n")
 
-	// 按照 KeyName (msgid) 排序，确保每次导出的顺序一致
+	// 按照 KeyName (msgid) 的小写形式排序，确保每次导出的顺序一致
 	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].KeyName < keys[j].KeyName
+		return strings.ToLower(keys[i].KeyName) < strings.ToLower(keys[j].KeyName)
 	})
 
 	// 生成翻译条目
