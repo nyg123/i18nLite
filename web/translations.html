@@ -44,6 +44,9 @@
                                     <button class="layui-btn layui-btn-warm" id="import-po-btn">
                                         <i class="layui-icon layui-icon-upload"></i> 导入PO文件
                                     </button>
+                                    <button class="layui-btn layui-btn-primary" id="export-po-btn">
+                                        <i class="layui-icon layui-icon-download-circle"></i> 导出PO文件
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -105,9 +108,7 @@
                 </div>
             </div>
         </form>
-    </div>
-
-    <!-- PO文件导入弹窗 -->
+    </div>    <!-- PO文件导入弹窗 -->
     <div id="import-po-modal" style="display: none; padding: 20px;">
         <form class="layui-form" id="import-po-form">
             <div class="layui-form-item">
@@ -137,6 +138,42 @@
             <div class="layui-form-item">
                 <div class="layui-input-block">
                     <button type="button" class="layui-btn" id="start-import-btn">开始导入</button>
+                    <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- PO文件导出弹窗 -->
+    <div id="export-po-modal" style="display: none; padding: 20px;">
+        <form class="layui-form" id="export-po-form">            <div class="layui-form-item">
+                <label class="layui-form-label">导出格式</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="export-format" value="zip" title="ZIP压缩包(所有语言)" lay-filter="export-format" checked>
+                    <input type="radio" name="export-format" value="single" title="单个PO文件" lay-filter="export-format">
+                </div>
+            </div>
+            <div class="layui-form-item" id="language-select-item" style="display: none;">
+                <label class="layui-form-label">选择语言</label>
+                <div class="layui-input-block">
+                    <select name="export-language" id="export-language" lay-filter="export-language">
+                        <option value="">请选择语言</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <div style="color: #666; font-size: 12px; line-height: 1.5;">
+                        <p><strong>说明：</strong></p>
+                        <p>• ZIP压缩包：导出所有语言的PO文件到一个压缩包中</p>
+                        <p>• 单个PO文件：只导出指定语言的PO文件</p>
+                        <p>• PO文件可以导入到其他国际化工具中使用</p>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" id="start-export-btn">开始导出</button>
                     <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
                 </div>
             </div>

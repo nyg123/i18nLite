@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"I18nLite/database"
 	"I18nLite/models"
@@ -421,4 +424,151 @@ func extractLanguageFromFilename(filename string) string {
 		return lang
 	}
 	return ""
+}
+
+// ExportPOFiles 导出PO文件
+func ExportPOFiles(c *gin.Context) {
+	projectIDStr := c.Param("projectId")
+	projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的项目ID"})
+		return
+	}
+
+	// 验证项目是否存在
+	var project models.Project
+	if err := database.DB.First(&project, projectID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "项目不存在"})
+		return
+	}
+
+	// 获取查询参数
+	language := c.Query("lang")               // 可选：指定导出的语言
+	format := c.DefaultQuery("format", "zip") // 默认为zip格式
+
+	// 获取项目的所有Key和翻译
+	var keys []models.TranslationKey
+	if err := database.DB.Where("project_id = ?", projectID).
+		Preload("Translations").
+		Find(&keys).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取翻译数据失败"})
+		return
+	}
+
+	// 获取项目支持的语言列表
+	languages := []string{}
+	if project.Languages != "" {
+		for _, lang := range strings.Split(project.Languages, ",") {
+			languages = append(languages, strings.TrimSpace(lang))
+		}
+	}
+
+	// 如果指定了特定语言，只导出该语言
+	if language != "" {
+		languages = []string{language}
+	}
+
+	// 如果只有一个语言且格式不是zip，直接返回PO文件内容
+	if len(languages) == 1 && format != "zip" {
+		lang := languages[0]
+		poContent := generatePOContent(project, keys, lang)
+
+		// 设置响应头
+		filename := fmt.Sprintf("%s_%s.po", project.Name, lang)
+		c.Header("Content-Type", "application/octet-stream")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+		c.String(http.StatusOK, poContent)
+		return
+	}
+
+	// 生成ZIP文件包含多个PO文件
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s_po_files.zip\"", project.Name))
+
+	// 创建ZIP writer
+	zipWriter := zip.NewWriter(c.Writer)
+	defer zipWriter.Close()
+
+	// 为每种语言生成PO文件
+	for _, lang := range languages {
+		poContent := generatePOContent(project, keys, lang)
+
+		// 在ZIP中创建文件
+		filename := fmt.Sprintf("%s.po", lang)
+		fileWriter, err := zipWriter.Create(filename)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建ZIP文件失败"})
+			return
+		}
+
+		_, err = fileWriter.Write([]byte(poContent))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "写入ZIP文件失败"})
+			return
+		}
+	}
+}
+
+// generatePOContent 生成PO文件内容
+func generatePOContent(project models.Project, keys []models.TranslationKey, language string) string {
+	var content strings.Builder
+
+	// 生成PO文件头
+	content.WriteString("# Translation file for project: " + project.Name + "\n")
+	content.WriteString("# Language: " + language + "\n")
+	content.WriteString("# Generated at: " + time.Now().Format("2006-01-02 15:04:05") + "\n")
+	content.WriteString("#\n")
+	content.WriteString("msgid \"\"\n")
+	content.WriteString("msgstr \"\"\n")
+	content.WriteString("\"Content-Type: text/plain; charset=UTF-8\\n\"\n")
+	content.WriteString("\"Language: " + language + "\\n\"\n")
+	content.WriteString("\"MIME-Version: 1.0\\n\"\n")
+	content.WriteString("\"Content-Transfer-Encoding: 8bit\\n\"\n")
+	content.WriteString("\n")
+
+	// 按照 KeyName (msgid) 排序，确保每次导出的顺序一致
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].KeyName < keys[j].KeyName
+	})
+
+	// 生成翻译条目
+	for _, key := range keys {
+		// 添加注释（如果有）
+		if key.Comment != "" {
+			lines := strings.Split(key.Comment, "\n")
+			for _, line := range lines {
+				content.WriteString("# " + line + "\n")
+			}
+		}
+
+		// 添加msgid
+		content.WriteString("msgid \"" + escapePOString(key.KeyName) + "\"\n")
+
+		// 查找对应语言的翻译
+		var translation string
+		for _, trans := range key.Translations {
+			if trans.Lang == language {
+				translation = trans.Translation
+				break
+			}
+		}
+
+		// 添加msgstr
+		content.WriteString("msgstr \"" + escapePOString(translation) + "\"\n")
+		content.WriteString("\n")
+	}
+
+	return content.String()
+}
+
+// escapePOString 转义PO文件字符串
+func escapePOString(s string) string {
+	// 转义特殊字符
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
 }

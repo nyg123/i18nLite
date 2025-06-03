@@ -45,8 +45,8 @@ func SetupRoutes(r *gin.Engine) {
 
 			// 导入导出 API
 			projects.POST("/:projectId/import/po", controllers.ImportPOFiles)
+			projects.GET("/:projectId/export/po", controllers.ExportPOFiles)
 			// projects.POST("/:projectId/import/excel", controllers.ImportExcel)
-			// projects.GET("/:projectId/export/po", controllers.ExportPO)
 			// projects.GET("/:projectId/export/excel", controllers.ExportExcel)
 		}
 

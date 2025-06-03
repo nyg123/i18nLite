@@ -74,11 +74,16 @@ window.TranslationsPage = {
         if (addKeyBtn) {
             addKeyBtn.addEventListener('click', () => TranslationManager.addKey());
         }
-        
-        // 导入PO文件按钮
+          // 导入PO文件按钮
         const importPoBtn = document.getElementById('import-po-btn');
         if (importPoBtn) {
             importPoBtn.addEventListener('click', () => this.showImportPOModal());
+        }
+
+        // 导出PO文件按钮
+        const exportPoBtn = document.getElementById('export-po-btn');
+        if (exportPoBtn) {
+            exportPoBtn.addEventListener('click', () => this.showExportPOModal());
         }
 
         // 搜索Key
@@ -304,9 +309,115 @@ window.TranslationsPage = {
             area: ['600px', '500px'],
             btn: ['确定'],
             yes: function(index) {
-                layer.close(index);
+                layer.close(index);            }
+        });
+    },
+
+    // 显示导出PO文件弹窗
+    showExportPOModal: function() {
+        if (!this.currentProjectId) {
+            I18nUtils.showMessage('请先选择项目', 'error');
+            return;
+        }
+
+        const layer = layui.layer;
+        const form = layui.form;
+        
+        layer.open({
+            type: 1,
+            title: '导出PO文件',
+            content: layui.jquery('#export-po-modal'),
+            area: ['500px', '400px'],
+            success: () => {
+                // 初始化导出选项
+                this.initExportOptions();
+                // 监听导出格式变化
+                form.on('radio(export-format)', (data) => {
+                    this.toggleLanguageSelect(data.value);
+                });
             }
         });
+    },
+
+    // 初始化导出选项
+    initExportOptions: function() {
+        // 加载项目支持的语言列表
+        const languages = I18nUtils.getProjectLanguages();
+        const select = document.getElementById('export-language');
+        if (select && languages.length > 0) {
+            select.innerHTML = '<option value="">请选择语言</option>';
+            languages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = lang;
+                select.appendChild(option);
+            });
+            layui.form.render('select');
+        }
+
+        // 绑定开始导出按钮
+        const startExportBtn = document.getElementById('start-export-btn');
+        if (startExportBtn) {
+            startExportBtn.onclick = () => this.startExportPO();
+        }
+    },
+
+    // 切换语言选择显示/隐藏
+    toggleLanguageSelect: function(format) {
+        const languageSelectItem = document.getElementById('language-select-item');
+        if (languageSelectItem) {
+            if (format === 'single') {
+                languageSelectItem.style.display = 'block';
+            } else {
+                languageSelectItem.style.display = 'none';
+            }
+        }
+    },
+
+    // 开始导出PO文件
+    startExportPO: function() {
+        const layer = layui.layer;
+        
+        // 获取导出选项
+        const formatRadios = document.querySelectorAll('input[name="export-format"]:checked');
+        const format = formatRadios.length > 0 ? formatRadios[0].value : 'zip';
+        
+        let url = `${I18nUtils.API_BASE_URL}/projects/${this.currentProjectId}/export/po?format=${format}`;
+        
+        // 如果是单个文件导出，需要选择语言
+        if (format === 'single') {
+            const language = document.getElementById('export-language').value;
+            if (!language) {
+                I18nUtils.showMessage('请选择要导出的语言', 'error');
+                return;
+            }
+            url += `&lang=${encodeURIComponent(language)}`;
+        }
+
+        // 显示加载动画
+        const loadingIndex = layer.load(1, { shade: [0.5, '#fff'] });
+
+        // 创建一个隐藏的a标签来下载文件
+        const link = document.createElement('a');
+        link.href = url;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // 监听下载完成
+        const cleanup = () => {
+            layer.close(loadingIndex);
+            document.body.removeChild(link);
+        };
+
+        // 触发下载
+        link.click();
+        
+        // 由于无法直接监听下载完成，使用延时关闭加载动画
+        setTimeout(() => {
+            cleanup();
+            layer.closeAll(); // 关闭导出弹窗
+            I18nUtils.showMessage('导出请求已发送，请检查下载', 'success');
+        }, 1000);
     }
 };
 
