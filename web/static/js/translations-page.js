@@ -19,13 +19,24 @@ window.TranslationsPage = {
                 });
             }
         });
-    },      // 解析URL参数
+    },    // 解析URL参数
     parseUrlParams: function(layer) {
         const urlParams = new URLSearchParams(window.location.search);
-        this.currentProjectId = urlParams.get('projectId');
+        const projectIdStr = urlParams.get('projectId');
         
-        if (!this.currentProjectId) {
+        if (!projectIdStr) {
             layer.msg('项目ID参数缺失，请从项目列表进入', {
+                icon: 2,
+                time: 3000
+            }, function() {
+                window.location.href = 'index.html';
+            });
+            return;
+        }
+        
+        this.currentProjectId = parseInt(projectIdStr, 10);
+        if (isNaN(this.currentProjectId)) {
+            layer.msg('无效的项目ID参数', {
                 icon: 2,
                 time: 3000
             }, function() {
@@ -110,11 +121,9 @@ window.TranslationsPage = {
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.refreshPage());
-        }
-        
-        // 表单提交事件
+        }        // 表单提交事件
         form.on('submit(key-submit)', (data) => {
-            data.field.project_id = this.currentProjectId; // 确保项目ID正确
+            data.field.project_id = this.currentProjectId; // 现在已经是数字了
             TranslationManager.submitKey(data.field);
             return false;
         });

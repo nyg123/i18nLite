@@ -151,11 +151,24 @@ window.TranslationManager = {
         }, '确认删除');
     },    // 提交Key表单
     submitKey: function(data) {
-        const isEdit = !!data.id;
+        const isEdit = data.id && data.id !== '';
         const url = isEdit ? 
             `${I18nUtils.API_BASE_URL}/keys/${data.id}` : 
             `${I18nUtils.API_BASE_URL}/projects/${data.project_id}/keys`;
         const method = isEdit ? 'PUT' : 'POST';
+
+        // 确保数字类型字段为正确的类型
+        if (data.id && data.id !== '') {
+            data.id = parseInt(data.id, 10);
+        }
+        if (data.project_id) {
+            data.project_id = parseInt(data.project_id, 10);
+        }
+
+        // 创建新Key时，不发送id字段
+        if (!isEdit) {
+            delete data.id;
+        }
 
         I18nUtils.request(url, {
             method: method,

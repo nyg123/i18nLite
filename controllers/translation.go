@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"I18nLite/database"
 	"I18nLite/models"
@@ -128,7 +127,10 @@ func BatchUpdateTranslations(c *gin.Context) {
 	keyID := c.Param("keyId")
 
 	var request struct {
-		Translations []models.Translation `json:"translations" binding:"required"`
+		Translations []struct {
+			Language string `json:"language" binding:"required"`
+			Content  string `json:"content" binding:"required"`
+		} `json:"translations" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -142,6 +144,13 @@ func BatchUpdateTranslations(c *gin.Context) {
 		return
 	}
 
+	// 验证Key是否存在
+	var translationKey models.TranslationKey
+	if err := database.DB.First(&translationKey, keyIDInt).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "翻译Key不存在"})
+		return
+	}
+
 	// 开始事务
 	tx := database.DB.Begin()
 	defer func() {
@@ -150,31 +159,52 @@ func BatchUpdateTranslations(c *gin.Context) {
 		}
 	}()
 
-	for _, translation := range request.Translations {
-		translation.KeyID = keyIDInt
+	for _, reqTranslation := range request.Translations {
+		// 创建 Translation 对象
+		translation := models.Translation{
+			KeyID:       keyIDInt,
+			Lang:        reqTranslation.Language,
+			Translation: reqTranslation.Content,
+		}
 
 		// 使用 ON DUPLICATE KEY UPDATE 的逻辑
 		var existing models.Translation
-		err := tx.Where("key_id = ? AND lang = ?", keyIDInt, translation.Lang).First(&existing).Error
+		err := tx.Where("key_id = ? AND lang = ?", keyIDInt, reqTranslation.Language).First(&existing).Error
 
 		if err != nil {
 			// 不存在，创建新的
 			if err := tx.Create(&translation).Error; err != nil {
 				tx.Rollback()
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "批量更新翻译失败"})
+				c.JSON(
+					http.StatusInternalServerError, gin.H{
+						"error": "创建翻译失败: " + err.Error(),
+					},
+				)
 				return
 			}
 		} else {
 			// 存在，更新
-			if err := tx.Model(&existing).Updates(translation).Error; err != nil {
+			if err := tx.Model(&existing).Update("translation", reqTranslation.Content).Error; err != nil {
 				tx.Rollback()
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "批量更新翻译失败"})
+				c.JSON(
+					http.StatusInternalServerError, gin.H{
+						"error": "更新翻译失败: " + err.Error(),
+					},
+				)
 				return
 			}
 		}
 	}
 
-	tx.Commit()
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(
+			http.StatusInternalServerError, gin.H{
+				"error": "提交事务失败: " + err.Error(),
+			},
+		)
+		return
+	}
 
 	c.JSON(
 		http.StatusOK, gin.H{
@@ -628,22 +658,21 @@ func generatePOContent(project models.Project, keys []models.TranslationKey, lan
 	var content strings.Builder
 
 	// 生成PO文件头
-	content.WriteString("# Translation file for project: " + project.Name + "\n")
-	content.WriteString("# Language: " + language + "\n")
-	content.WriteString("# Generated at: " + time.Now().Format("2006-01-02 15:04:05") + "\n")
-	content.WriteString("#\n")
 	content.WriteString("msgid \"\"\n")
 	content.WriteString("msgstr \"\"\n")
 	content.WriteString("\"Content-Type: text/plain; charset=UTF-8\\n\"\n")
 	content.WriteString("\"Language: " + language + "\\n\"\n")
 	content.WriteString("\"MIME-Version: 1.0\\n\"\n")
 	content.WriteString("\"Content-Transfer-Encoding: 8bit\\n\"\n")
+	content.WriteString("\"Project-Id-Version: " + project.Name + "\\n\"\n")
 	content.WriteString("\n")
 
 	// 按照 KeyName (msgid) 的小写形式排序，确保每次导出的顺序一致
-	sort.Slice(keys, func(i, j int) bool {
-		return strings.ToLower(keys[i].KeyName) < strings.ToLower(keys[j].KeyName)
-	})
+	sort.Slice(
+		keys, func(i, j int) bool {
+			return strings.ToLower(keys[i].KeyName) < strings.ToLower(keys[j].KeyName)
+		},
+	)
 
 	// 生成翻译条目
 	for _, key := range keys {

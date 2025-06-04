@@ -9,12 +9,12 @@ type Project struct {
 	ID          uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string    `json:"name" gorm:"type:varchar(128);not null;uniqueIndex" binding:"required"`
 	Description string    `json:"description" gorm:"type:text"`
-	Languages   string    `json:"languages" gorm:"type:varchar(500);comment:支持的语言列表，逗号分隔"`
+	Languages   string    `json:"languages" gorm:"type:varchar(500);comment:支持的语言列表，逗号分隔" binding:"required"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// 关联关系
-	TranslationKeys []TranslationKey `json:"translation_keys,omitempty" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE"`
+	TranslationKeys []TranslationKey `json:"translation_keys,omitempty" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE" binding:"-"`
 }
 
 // ProjectCreateRequest 创建项目请求结构体
@@ -34,28 +34,28 @@ type ProjectUpdateRequest struct {
 // TranslationKey Key表
 type TranslationKey struct {
 	ID        uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-	ProjectID uint64    `json:"project_id" gorm:"not null;index"`
+	ProjectID uint64    `json:"project_id" gorm:"not null;index" binding:"required"`
 	KeyName   string    `json:"key_name" gorm:"type:varchar(255);not null" binding:"required"`
 	Comment   string    `json:"comment" gorm:"type:text"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// 关联关系
-	Project      Project       `json:"project,omitempty" gorm:"foreignKey:ProjectID"`
-	Translations []Translation `json:"translations,omitempty" gorm:"foreignKey:KeyID;constraint:OnDelete:CASCADE"`
+	Project      Project       `json:"project,omitempty" gorm:"foreignKey:ProjectID" binding:"-"`
+	Translations []Translation `json:"translations,omitempty" gorm:"foreignKey:KeyID;constraint:OnDelete:CASCADE" binding:"-"`
 }
 
 // Translation 翻译表
 type Translation struct {
 	ID          uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
-	KeyID       uint64    `json:"key_id" gorm:"not null;index"`
-	Lang        string    `json:"lang" gorm:"type:char(2);not null" binding:"required,len=2"`
+	KeyID       uint64    `json:"key_id" gorm:"not null;index" binding:"required"`
+	Lang        string    `json:"lang" gorm:"type:varchar(10);not null" binding:"required"`
 	Translation string    `json:"translation" gorm:"type:text"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// 关联关系
-	TranslationKey TranslationKey `json:"translation_key,omitempty" gorm:"foreignKey:KeyID"`
+	TranslationKey TranslationKey `json:"translation_key,omitempty" gorm:"foreignKey:KeyID" binding:"-"`
 }
 
 // 确保复合唯一索引
