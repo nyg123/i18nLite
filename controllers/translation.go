@@ -617,7 +617,7 @@ func ExportPOFiles(c *gin.Context) {
 		poContent := generatePOContent(project, keys, lang)
 
 		// 设置响应头
-		filename := fmt.Sprintf("%s_%s.po", project.Name, lang)
+		filename := fmt.Sprintf("%s.po", lang)
 		c.Header("Content-Type", "application/octet-stream")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 
@@ -692,11 +692,22 @@ func generatePOContent(project models.Project, keys []models.TranslationKey, lan
 
 		// 查找对应语言的翻译
 		var translation string
+		var fallbackTranslation string
+
 		for _, trans := range key.Translations {
 			if trans.Lang == language {
 				translation = trans.Translation
 				break
 			}
+			// 记录英文翻译作为备选
+			if trans.Lang == "en" {
+				fallbackTranslation = trans.Translation
+			}
+		}
+
+		// 如果当前语言没有翻译，且不是英文，则使用英文翻译作为默认值
+		if translation == "" && language != "en" && fallbackTranslation != "" {
+			translation = fallbackTranslation
 		}
 
 		// 添加msgstr
