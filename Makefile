@@ -98,8 +98,21 @@ init: ## 初始化项目 (首次运行)
 	@echo "   - API:  http://localhost:8000"
 	@echo "   - MySQL: localhost:3306"
 
+# 初始化数据库 (仅数据库)
+init-db: ## 仅初始化数据库表结构
+	@echo "📊 初始化数据库..."
+	docker-compose exec mysql mysql -u i18n_user -pi18n_password < sql/init.sql
+	@echo "✅ 数据库初始化完成"
+
+# 重置数据库 (删除并重新创建)
+reset-db: ## 重置数据库 (删除所有数据并重新创建表)
+	@echo "⚠️  重置数据库 (将删除所有数据)..."
+	docker-compose exec mysql mysql -u i18n_user -pi18n_password -e "DROP DATABASE IF EXISTS i18n_lite;"
+	docker-compose exec mysql mysql -u i18n_user -pi18n_password < sql/init.sql
+	@echo "✅ 数据库重置完成"
+
 # 备份数据库
 backup-db: ## 备份数据库
 	@echo "📦 备份数据库..."
-	docker-compose exec mysql mysqldump -u i18n_user -p i18n_lite > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	docker-compose exec mysql mysqldump -u i18n_user -pi18n_password i18n_lite > backup_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "✅ 数据库备份完成"

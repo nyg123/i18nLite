@@ -27,10 +27,8 @@ I18nLite 是一个前后端分离的多语言管理工具，支持多项目、�
 
 #### 数据库准备
 ```sql
--- 创建数据库
+-- 创建数据库和用户
 CREATE DATABASE i18n_lite CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 创建用户
 CREATE USER 'i18n_user'@'localhost' IDENTIFIED BY 'i18n_password';
 GRANT ALL PRIVILEGES ON i18n_lite.* TO 'i18n_user'@'localhost';
 FLUSH PRIVILEGES;
@@ -45,26 +43,80 @@ cd c:\www\tmp\I18nLite
 # 下载Go依赖
 go mod tidy
 
+# 初始化数据库表结构 (首次运行前必须执行)
+mysql -u i18n_user -pi18n_password i18n_lite < sql/init.sql
+
 # 使用本地配置文件启动
-set CONFIG_FILE=config/config.local.yaml
+$env:CONFIG_FILE="config/config.local.yaml"
 go run main.go
 ```
 
 后端服务将在 http://localhost:8000 启动
 
+**重要：** 本地开发环境需要手动执行 `sql/init.sql` 文件来创建数据库表结构，或使用 `make init-db` 命令。
+
+### 3. 前端访问
+
+直接打开前端文件即可：
+- 方式1：直接用浏览器打开 `web/index.html`
+- 方式2：使用本地服务器（如 Live Server 扩展）运行前端文件
 
 ### 4. 访问应用
 
 打开浏览器访问 http://localhost:3000
 
-## Docker 方式启动 (可选)
+## Docker 方式启动
+
+使用 Docker Compose 启动时，**无需手动执行 SQL 脚本**，MySQL 容器会自动初始化数据库表结构：
 
 ```bash
-# 在项目根目录执行
+# 在项目根目录执行（一键启动，自动初始化）
 docker-compose up -d
+
+# 或使用 Makefile 命令
+make run          # 重新构建并启动所有服务
+make init         # 初始化项目（首次运行推荐）
 ```
 
-访问 http://localhost 即可使用应用
+**Docker 环境的优势：**
+- 🚀 **自动初始化**：首次启动时自动执行 `sql/init.sql` 创建表结构
+- 💾 **数据持久化**：数据保存在宿主机，容器重启不丢失数据  
+- 🔄 **一键部署**：无需手动配置数据库和执行 SQL 脚本
+
+## 启动方式对比
+
+| 启动方式 | 数据库初始化 | 适用场景 | 特点 |
+|---------|------------|---------|-----|
+| **Docker Compose** | 🚀 自动执行 | 生产部署、团队开发 | 一键启动，自动化程度高 |
+| **本地开发** | ⚠️ 需手动执行 | 个人开发、调试 | 灵活控制，便于调试 |
+
+## Makefile 命令说明
+
+项目提供了便捷的 Makefile 命令：
+
+```bash
+# 查看所有可用命令
+make help
+
+# Docker 开发相关
+make run          # 重新构建并启动所有服务 (Docker)
+make dev          # 开发模式启动 (前台运行，显示日志)
+make rebuild      # 仅重新构建后端服务
+
+# 本地开发数据库管理
+make init-db      # 初始化数据库表结构 (本地环境)
+make reset-db     # 重置数据库 (删除所有数据)
+make backup-db    # 备份数据库
+
+# 其他
+make logs         # 查看所有服务日志 (Docker)
+make status       # 查看容器状态 (Docker)
+make clean        # 清理所有容器和镜像 (Docker)
+```
+
+**注意：** 
+- Docker 环境的 Makefile 命令主要用于容器管理
+- 本地开发环境的数据库命令需要手动执行
 
 ## 配置文件说明
 
@@ -134,11 +186,20 @@ set CONFIG_FILE=config/config.local.yaml
 ├── database/        # 数据库连接
 ├── models/          # 数据模型
 ├── routes/          # 路由配置
-    web/             # 前端静态文件
+├── sql/             # SQL脚本 (数据库表结构)
+├── web/             # 前端静态文件
 ├── nginx/           # Nginx配置
-├── sql/             # SQL脚本
 └── main.go          # 入口文件
 ```
+
+### 数据库初始化机制
+- **表结构定义**：所有数据库表结构定义在 `sql/init.sql` 文件中
+- **初始化方式**：需要手动执行 SQL 脚本或使用 Makefile 命令，不使用 GORM 自动迁移
+- **开发优势**：
+  - 更好的版本控制和表结构管理
+  - 支持复杂的索引和约束定义
+  - 更精确的字段类型控制
+  - 便于数据库结构的审查和维护
 
 ### CORS 配置
 后端已配置CORS，允许以下前端地址访问：
